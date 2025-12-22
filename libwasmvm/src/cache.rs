@@ -27,7 +27,7 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn init_cache(
     config: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
@@ -48,7 +48,7 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
     Ok(Box::into_raw(out))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn store_code_with_vk(
     cache: *mut cache_t,
     wasm: ByteSliceView,
@@ -96,7 +96,7 @@ fn do_store_code_with_vk(
     Ok(cache.store_code_with_vk(bundle, !unchecked, true)?)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn remove_vk(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -126,7 +126,7 @@ fn do_remove_vk(
 }
 
 // Exposes Cache::has_vk()
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn has_verifying_key(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -136,7 +136,7 @@ pub extern "C" fn has_verifying_key(
 }
 
 // Exposes Cache::load_vk()
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn get_verifying_key(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -145,7 +145,7 @@ pub extern "C" fn get_verifying_key(
     None
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn store_code(
     cache: *mut cache_t,
     wasm: ByteSliceView,
@@ -177,7 +177,7 @@ fn do_store_code(
     Ok(cache.store_code(wasm, checked, persist)?)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn remove_wasm(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -206,7 +206,7 @@ fn do_remove_wasm(
     Ok(())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -236,7 +236,7 @@ fn do_load_wasm(
     Ok(wasm)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn pin(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -266,7 +266,7 @@ fn do_pin(
     Ok(())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn unpin(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -374,7 +374,7 @@ fn set_to_csv(set: BTreeSet<impl AsRef<str>>) -> String {
     list.join(",")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -453,7 +453,7 @@ impl From<cosmwasm_vm::Metrics> for Metrics {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn get_metrics(
     cache: *mut cache_t,
     error_msg: Option<&mut UnmanagedVector>,
@@ -508,7 +508,7 @@ impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn get_pinned_metrics(
     cache: *mut cache_t,
     error_msg: Option<&mut UnmanagedVector>,
@@ -539,7 +539,7 @@ fn do_get_pinned_metrics(
 ///
 /// This must be called exactly once for any `*cache_t` returned by `init_cache`
 /// and cannot be called on any other pointer.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope

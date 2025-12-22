@@ -1,31 +1,31 @@
 //! A module containing calls into smart contracts via Cache and Instance.
 
 use std::convert::TryInto;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::SystemTime;
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
 use cosmwasm_std::Checksum;
 use cosmwasm_vm::{
-    call_execute_raw, call_ibc2_packet_ack_raw, call_ibc2_packet_receive_raw,
-    call_ibc2_packet_send_raw, call_ibc2_packet_timeout_raw, call_ibc_channel_close_raw,
-    call_ibc_channel_connect_raw, call_ibc_channel_open_raw, call_ibc_destination_callback_raw,
-    call_ibc_packet_ack_raw, call_ibc_packet_receive_raw, call_ibc_packet_timeout_raw,
-    call_ibc_source_callback_raw, call_instantiate_raw, call_migrate_raw,
-    call_migrate_with_info_raw, call_query_raw, call_reply_raw, call_sudo_raw, Backend, Cache,
-    Instance, InstanceOptions, VmResult,
+    Backend, Cache, Instance, InstanceOptions, VmResult, call_execute_raw,
+    call_ibc_channel_close_raw, call_ibc_channel_connect_raw, call_ibc_channel_open_raw,
+    call_ibc_destination_callback_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
+    call_ibc_packet_timeout_raw, call_ibc_source_callback_raw, call_ibc2_packet_ack_raw,
+    call_ibc2_packet_receive_raw, call_ibc2_packet_send_raw, call_ibc2_packet_timeout_raw,
+    call_instantiate_raw, call_migrate_raw, call_migrate_with_info_raw, call_query_raw,
+    call_reply_raw, call_sudo_raw,
 };
 
+use crate::GasReport;
 use crate::api::GoApi;
 use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_REPORT_ARG};
 use crate::cache::{cache_t, to_cache};
 use crate::db::Db;
-use crate::error::{handle_c_error_binary, Error};
+use crate::error::{Error, handle_c_error_binary};
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
-use crate::GasReport;
 
 fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -35,7 +35,7 @@ fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn instantiate(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -67,7 +67,7 @@ pub extern "C" fn instantiate(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn execute(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -99,7 +99,7 @@ pub extern "C" fn execute(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn migrate(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -129,7 +129,7 @@ pub extern "C" fn migrate(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn migrate_with_info(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -161,7 +161,7 @@ pub extern "C" fn migrate_with_info(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sudo(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -191,7 +191,7 @@ pub extern "C" fn sudo(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn reply(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -221,7 +221,7 @@ pub extern "C" fn reply(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn query(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -251,7 +251,7 @@ pub extern "C" fn query(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_channel_open(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -281,7 +281,7 @@ pub extern "C" fn ibc_channel_open(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_channel_connect(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -311,7 +311,7 @@ pub extern "C" fn ibc_channel_connect(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_channel_close(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -341,7 +341,7 @@ pub extern "C" fn ibc_channel_close(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_packet_receive(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -371,7 +371,7 @@ pub extern "C" fn ibc_packet_receive(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_packet_ack(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -401,7 +401,7 @@ pub extern "C" fn ibc_packet_ack(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_packet_timeout(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -431,7 +431,7 @@ pub extern "C" fn ibc_packet_timeout(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_source_callback(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -461,7 +461,7 @@ pub extern "C" fn ibc_source_callback(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc_destination_callback(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -491,7 +491,7 @@ pub extern "C" fn ibc_destination_callback(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc2_packet_receive(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -521,7 +521,7 @@ pub extern "C" fn ibc2_packet_receive(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc2_packet_ack(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -551,7 +551,7 @@ pub extern "C" fn ibc2_packet_ack(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc2_packet_timeout(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -581,7 +581,7 @@ pub extern "C" fn ibc2_packet_timeout(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ibc2_packet_send(
     cache: *mut cache_t,
     checksum: ByteSliceView,

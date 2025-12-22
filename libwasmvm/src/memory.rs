@@ -134,7 +134,7 @@ impl U8SliceView {
 ///
 /// ```
 /// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
-/// #[no_mangle]
+/// #[unsafe(no_mangle)]
 /// pub extern "C" fn save_wasm_to_cache(
 ///     cache: *mut cache_t,
 ///     wasm: ByteSliceView,
@@ -291,7 +291,7 @@ impl Default for UnmanagedVector {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn new_unmanaged_vector(
     nil: bool,
     ptr: *const u8,
@@ -310,7 +310,7 @@ pub extern "C" fn new_unmanaged_vector(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     let _ = v.consume();
 }
