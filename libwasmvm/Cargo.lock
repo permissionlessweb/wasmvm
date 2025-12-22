@@ -1052,6 +1052,11 @@ name = "cosmwasm-core"
 version = "3.0.3-dev"
 
 [[package]]
+name = "cosmwasm-core"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+
+[[package]]
 name = "cosmwasm-crypto"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1100,6 +1105,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-crypto"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+dependencies = [
+ "ark-bls12-381",
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "cosmwasm-core 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "curve25519-dalek",
+ "digest",
+ "ecdsa",
+ "ed25519-zebra",
+ "k256",
+ "num-bigint 0.4.6",
+ "num-traits",
+ "p256",
+ "rand_core 0.6.4",
+ "rayon",
+ "sha2",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "cosmwasm-derive"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1113,6 +1142,16 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.3-dev"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
+name = "cosmwasm-derive"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1155,6 +1194,30 @@ dependencies = [
  "cosmwasm-crypto 3.0.3-dev",
  "cosmwasm-derive 3.0.3-dev",
  "cw-schema 3.0.3-dev",
+ "derive_more 2.0.1",
+ "hex",
+ "rand_core 0.6.4",
+ "rmp-serde",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "sha2",
+ "static_assertions",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "cosmwasm-std"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+dependencies = [
+ "base64",
+ "bech32",
+ "bnum",
+ "cosmwasm-core 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "cosmwasm-crypto 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "cosmwasm-derive 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "cw-schema 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
  "derive_more 2.0.1",
  "hex",
  "rand_core 0.6.4",
@@ -1405,6 +1468,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-schema"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+dependencies = [
+ "cw-schema-derive 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "indexmap 2.12.1",
+ "schemars 1.0.4",
+ "serde",
+ "serde_with",
+ "siphasher",
+ "typeid",
+]
+
+[[package]]
 name = "cw-schema-derive"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1421,6 +1498,19 @@ dependencies = [
 [[package]]
 name = "cw-schema-derive"
 version = "3.0.3-dev"
+dependencies = [
+ "heck 0.5.0",
+ "itertools 0.13.0",
+ "owo-colors",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
+name = "cw-schema-derive"
+version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
 dependencies = [
  "heck 0.5.0",
  "itertools 0.13.0",
@@ -6038,7 +6128,7 @@ name = "wasmvm"
 version = "3.0.2"
 dependencies = [
  "cbindgen",
- "cosmwasm-std 3.0.3-dev",
+ "cosmwasm-std 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
  "cosmwasm-vm",
  "errno",
  "hex",
