@@ -448,7 +448,7 @@ dependencies = [
  "bitflags 2.9.1",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -866,7 +866,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "117725a109d387c937a1533ce01b450cbde6b88abceea8473c4d7a85853cda3c"
 dependencies = [
  "lazy_static",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1050,11 +1050,7 @@ checksum = "9b0a718b13ffe224e32a8c1f68527354868f47d6cc84afe8c66cb05fbb3ced6e"
 [[package]]
 name = "cosmwasm-core"
 version = "3.0.3-dev"
-
-[[package]]
-name = "cosmwasm-core"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 
 [[package]]
 name = "cosmwasm-crypto"
@@ -1084,36 +1080,13 @@ dependencies = [
 [[package]]
 name = "cosmwasm-crypto"
 version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ff",
  "ark-serialize",
  "cosmwasm-core 3.0.3-dev",
- "curve25519-dalek",
- "digest",
- "ecdsa",
- "ed25519-zebra",
- "k256",
- "num-bigint 0.4.6",
- "num-traits",
- "p256",
- "rand_core 0.6.4",
- "rayon",
- "sha2",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "cosmwasm-crypto"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
-dependencies = [
- "ark-bls12-381",
- "ark-ec",
- "ark-ff",
- "ark-serialize",
- "cosmwasm-core 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
  "curve25519-dalek",
  "digest",
  "ecdsa",
@@ -1142,16 +1115,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.3-dev"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.103",
-]
-
-[[package]]
-name = "cosmwasm-derive"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1186,6 +1150,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "base64",
  "bech32",
@@ -1207,32 +1172,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmwasm-std"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
-dependencies = [
- "base64",
- "bech32",
- "bnum",
- "cosmwasm-core 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
- "cosmwasm-crypto 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
- "cosmwasm-derive 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
- "cw-schema 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
- "derive_more 2.0.1",
- "hex",
- "rand_core 0.6.4",
- "rmp-serde",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "sha2",
- "static_assertions",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "cosmwasm-vm"
 version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "bech32",
  "blake2",
@@ -1266,6 +1208,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -1457,22 +1400,9 @@ dependencies = [
 [[package]]
 name = "cw-schema"
 version = "3.0.3-dev"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "cw-schema-derive 3.0.3-dev",
- "indexmap 2.12.1",
- "schemars 1.0.4",
- "serde",
- "serde_with",
- "siphasher",
- "typeid",
-]
-
-[[package]]
-name = "cw-schema"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
-dependencies = [
- "cw-schema-derive 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
  "indexmap 2.12.1",
  "schemars 1.0.4",
  "serde",
@@ -1498,19 +1428,7 @@ dependencies = [
 [[package]]
 name = "cw-schema-derive"
 version = "3.0.3-dev"
-dependencies = [
- "heck 0.5.0",
- "itertools 0.13.0",
- "owo-colors",
- "proc-macro2",
- "quote",
- "syn 2.0.103",
-]
-
-[[package]]
-name = "cw-schema-derive"
-version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#0e832ed9f85ca9c248f3ef8c6012574b2b7f3f73"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d070d7cd1ace0d4eff65efb502ac4cb2060c2f2a"
 dependencies = [
  "heck 0.5.0",
  "itertools 0.13.0",
@@ -1827,7 +1745,6 @@ dependencies = [
  "digest",
  "elliptic-curve",
  "rfc6979",
- "serdect",
  "signature",
  "spki",
 ]
@@ -1889,7 +1806,6 @@ dependencies = [
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
- "serdect",
  "subtle",
  "zeroize",
 ]
@@ -2476,12 +2392,12 @@ dependencies = [
 [[package]]
 name = "halo2-base"
 version = "0.4.1"
+source = "git+https://github.com/permissionlessweb/halo2-lib#004e12c4dd97c26af4fef1af57a7f7a869d8a9d0"
 dependencies = [
  "ark-std 0.3.0",
  "getset",
  "halo2-axiom",
  "itertools 0.11.0",
- "jemallocator",
  "log",
  "num-bigint 0.4.6",
  "num-integer",
@@ -2496,27 +2412,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "halo2-ecc"
-version = "0.4.1"
-dependencies = [
- "halo2-base",
- "itertools 0.11.0",
- "num-bigint 0.4.6",
- "num-integer",
- "num-traits",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
- "rand_core 0.6.4",
- "rayon",
- "serde",
- "serde_json",
- "sha2",
- "test-case",
-]
-
-[[package]]
 name = "halo2_gadgets"
-version = "0.3.1"
+version = "0.4.0"
+source = "git+https://github.com/permissionlessweb/halo2?branch=mvp#a331093234caf051613c44363a5f69b6ed2b0c1f"
 dependencies = [
  "arrayvec",
  "bitvec",
@@ -2537,6 +2435,7 @@ dependencies = [
 [[package]]
 name = "halo2_poseidon"
 version = "0.1.0"
+source = "git+https://github.com/permissionlessweb/halo2?branch=mvp#a331093234caf051613c44363a5f69b6ed2b0c1f"
 dependencies = [
  "bitvec",
  "ff",
@@ -2546,7 +2445,8 @@ dependencies = [
 
 [[package]]
 name = "halo2_proofs"
-version = "0.3.1"
+version = "0.3.2"
+source = "git+https://github.com/permissionlessweb/halo2?branch=mvp#a331093234caf051613c44363a5f69b6ed2b0c1f"
 dependencies = [
  "backtrace",
  "blake2b_simd",
@@ -2557,7 +2457,6 @@ dependencies = [
  "pasta_curves",
  "plotters",
  "rand_core 0.6.4",
- "subtle",
  "tabbycat",
  "tracing",
 ]
@@ -2624,6 +2523,7 @@ checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 [[package]]
 name = "headstash-randomness"
 version = "0.1.0"
+source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#54b29f335d03968825c27298006d5f744438420a"
 dependencies = [
  "blake3",
  "rand 0.8.5",
@@ -3011,7 +2911,7 @@ checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3060,26 +2960,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
-name = "jemalloc-sys"
-version = "0.5.4+5.3.0-patched"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac6c1946e1cea1788cbfde01c993b52a10e2da07f4bac608228d1bed20bfebf2"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
-name = "jemallocator"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0de374a9f8e63150e6f5e8a60cc14c668226d7a347d8aee1a45766e3c4dd3bc"
-dependencies = [
- "jemalloc-sys",
- "libc",
-]
-
-[[package]]
 name = "jpeg-decoder"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3122,7 +3002,6 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "once_cell",
- "serdect",
  "sha2",
  "signature",
 ]
@@ -3787,19 +3666,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "plume_rustcrypto"
-version = "0.2.1"
-dependencies = [
- "blake3",
- "k256",
- "num-bigint 0.4.6",
- "num-integer",
- "rand_core 0.6.4",
- "serde",
- "signature",
-]
-
-[[package]]
 name = "png"
 version = "0.17.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4031,7 +3897,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.103",
@@ -4044,7 +3910,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.103",
@@ -4542,7 +4408,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4689,7 +4555,6 @@ dependencies = [
  "der",
  "generic-array",
  "pkcs8",
- "serdect",
  "subtle",
  "zeroize",
 ]
@@ -4853,16 +4718,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.103",
-]
-
-[[package]]
-name = "serdect"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a84f14a19e9a014bb9f4512488d9829a68e04ecabffb0f9904cd1ace94598177"
-dependencies = [
- "base16ct",
- "serde",
 ]
 
 [[package]]
@@ -5177,40 +5032,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "test-case"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2550dd13afcd286853192af8601920d959b14c401fcece38071d53bf0768a8"
-dependencies = [
- "test-case-macros",
-]
-
-[[package]]
-name = "test-case-core"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adcb7fd841cd518e279be3d5a3eb0636409487998a4aff22f3de87b81e88384f"
-dependencies = [
- "cfg-if",
- "proc-macro2",
- "quote",
- "syn 2.0.103",
-]
-
-[[package]]
-name = "test-case-macros"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c89e72a01ed4c579669add59014b9a524d609c0c88c6a585ce37485879f6ffb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.103",
- "test-case-core",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6128,7 +5950,7 @@ name = "wasmvm"
 version = "3.0.2"
 dependencies = [
  "cbindgen",
- "cosmwasm-std 3.0.3-dev (git+https://github.com/permissionlessweb/cosmwasm?branch=mvp)",
+ "cosmwasm-std 3.0.3-dev",
  "cosmwasm-vm",
  "errno",
  "hex",
@@ -6716,6 +6538,7 @@ dependencies = [
 [[package]]
 name = "zk-headstash"
 version = "0.0.1"
+source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#54b29f335d03968825c27298006d5f744438420a"
 dependencies = [
  "aes",
  "anybuf",
@@ -6735,7 +6558,6 @@ dependencies = [
  "getset",
  "group",
  "halo2-base",
- "halo2-ecc",
  "halo2_gadgets",
  "halo2_proofs",
  "headstash-randomness",
@@ -6751,7 +6573,6 @@ dependencies = [
  "num-bigint 0.4.6",
  "num-traits",
  "pasta_curves",
- "plume_rustcrypto",
  "poseidon-rs",
  "prost 0.14.1",
  "rand 0.8.5",
