@@ -416,11 +416,11 @@ typedef struct GasReport {
 
 struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector save_wasm_with_vk(struct cache_t *cache,
-                                         struct ByteSliceView wasm,
-                                         bool unchecked,
-                                         struct ByteSliceView vk,
-                                         struct UnmanagedVector *error_msg);
+struct UnmanagedVector store_code_with_vk(struct cache_t *cache,
+                                          struct ByteSliceView wasm,
+                                          bool unchecked,
+                                          struct ByteSliceView vk,
+                                          struct UnmanagedVector *error_msg);
 
 void remove_vk(struct cache_t *cache,
                struct ByteSliceView checksum,

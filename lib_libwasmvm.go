@@ -57,6 +57,17 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+// StoreCodeWithVk will compile the Wasm code, and store the resulting compiled module, along with a halo2 circuit verifying key deserialized and pinned to memory.
+func (vm *VM) StoreCodeWithVk(blobs []WasmCode, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCost(blobs[0])
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	checksum, err := api.StoreCodeWithVk(vm.cache, blobs[0], blobs[1], true)
+	return checksum, gasCost, err
+}
+
 // StoreCode will compile the Wasm code, and store the resulting compiled module
 // as well as the original code. Both can be referenced later via Checksum.
 // This must be done one time for given code, after which it can be

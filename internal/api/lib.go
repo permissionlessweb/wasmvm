@@ -86,6 +86,19 @@ func ReleaseCache(cache Cache) {
 	cache.lockfile.Close() // Also releases the file lock
 }
 
+func StoreCodeWithVk(cache Cache, wasm, vk []byte, unchecked bool) ([]byte, error) {
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
+	v := makeView(vk)
+	defer runtime.KeepAlive(vk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_code_with_vk(cache.ptr, w, cbool(unchecked), v, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)

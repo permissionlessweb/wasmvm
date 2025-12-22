@@ -49,7 +49,7 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
 }
 
 #[no_mangle]
-pub extern "C" fn save_wasm_with_vk(
+pub extern "C" fn store_code_with_vk(
     cache: *mut cache_t,
     wasm: ByteSliceView,
     unchecked: bool,
@@ -58,10 +58,10 @@ pub extern "C" fn save_wasm_with_vk(
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_save_wasm_with_vk(c, wasm, vk, unchecked)
+            do_store_code_with_vk(c, wasm, vk, unchecked)
         }))
         .unwrap_or_else(|err| {
-            handle_vm_panic("do_save_wasm", err);
+            handle_vm_panic("do_store_code_with_vk", err);
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -70,7 +70,7 @@ pub extern "C" fn save_wasm_with_vk(
     UnmanagedVector::new(Some(checksum))
 }
 
-fn do_save_wasm_with_vk(
+fn do_store_code_with_vk(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
     vk: ByteSliceView,
