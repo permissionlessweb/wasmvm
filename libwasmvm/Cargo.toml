@@ -26,13 +26,13 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { version = "3.0.2", features = [
+cosmwasm-std = { path = "../../../zk-cosmwasm/mvp/packages/std", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { version = "3.0.2", features = [
+cosmwasm-vm = { path = "../../../zk-cosmwasm/mvp/packages/vm", features = [
   "staking",
   "stargate",
   "iterator",

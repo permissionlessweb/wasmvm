@@ -3,7 +3,8 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::Cache;
+use cosmwasm_vm::{Cache, CircuitType, CodeBundle, SerializedVK};
+
 use serde::Serialize;
 
 use crate::api::GoApi;
@@ -45,6 +46,103 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
     let cache = unsafe { Cache::new_with_config(config) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
+}
+
+#[no_mangle]
+pub extern "C" fn save_wasm_with_vk(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    unchecked: bool,
+    vk: ByteSliceView, // VK bytes (optional, can be null/empty)
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_save_wasm_with_vk(c, wasm, vk, unchecked)
+        }))
+        .unwrap_or_else(|err| {
+            handle_vm_panic("do_save_wasm", err);
+            Err(Error::panic())
+        }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let checksum = handle_c_error_binary(r, error_msg);
+    UnmanagedVector::new(Some(checksum))
+}
+
+fn do_save_wasm_with_vk(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    wasm: ByteSliceView,
+    vk: ByteSliceView,
+    unchecked: bool,
+) -> Result<Checksum, Error> {
+    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    let vk = vk.read().unwrap_or_default();
+
+    let bundle = if vk.is_empty() {
+        CodeBundle::wasm_only(wasm.to_vec())
+    } else {
+        // Parse VK bytes into SerializedVK
+        // Format: [circuit_type: u8][vk_bytes]
+        let vk = SerializedVK {
+            bytes: vk[1..].to_vec(),
+            circuit_type: CircuitType::Generic,
+            hash: [0; 32],
+            size_bytes: vk[1..].len(),
+        };
+        CodeBundle::with_vk(wasm.to_vec(), vk.bytes)
+    };
+
+    Ok(cache.store_code_with_vk(bundle, !unchecked, true)?)
+}
+
+#[no_mangle]
+pub extern "C" fn remove_vk(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_vk(c, checksum)))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_remove_vk", err);
+                Err(Error::panic())
+            }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_remove_vk(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksum: ByteSliceView,
+) -> Result<(), Error> {
+    let checksum: Checksum = checksum
+        .read()
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+        .try_into()?;
+    cache.remove_wasm(&checksum)?;
+    Ok(())
+}
+
+// Exposes Cache::has_vk()
+#[no_mangle]
+pub extern "C" fn has_verifying_key(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> bool {
+    false
+}
+
+// Exposes Cache::load_vk()
+#[no_mangle]
+pub extern "C" fn get_verifying_key(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> Option<UnmanagedVector> {
+    None
 }
 
 #[no_mangle]

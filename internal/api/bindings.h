@@ -53,6 +53,8 @@ enum GoError {
 };
 typedef int32_t GoError;
 
+typedef struct Option_UnmanagedVector Option_UnmanagedVector;
+
 typedef struct cache_t {
 
 } cache_t;
@@ -413,6 +415,24 @@ typedef struct GasReport {
 } GasReport;
 
 struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector save_wasm_with_vk(struct cache_t *cache,
+                                         struct ByteSliceView wasm,
+                                         bool unchecked,
+                                         struct ByteSliceView vk,
+                                         struct UnmanagedVector *error_msg);
+
+void remove_vk(struct cache_t *cache,
+               struct ByteSliceView checksum,
+               struct UnmanagedVector *error_msg);
+
+bool has_verifying_key(struct cache_t *cache,
+                       struct ByteSliceView checksum,
+                       struct UnmanagedVector *error_msg);
+
+struct Option_UnmanagedVector get_verifying_key(struct cache_t *cache,
+                                                struct ByteSliceView checksum,
+                                                struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector store_code(struct cache_t *cache,
                                   struct ByteSliceView wasm,
