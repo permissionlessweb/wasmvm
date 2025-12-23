@@ -4,6 +4,9 @@ set -e # Note we are not using bash here but the Alpine default shell
 export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 export TARGET_DIR="/target" # write to /target in the guest's file system to avoid writing to the host
 
+# Disable pkg-config for fontconfig to avoid cross-compilation issues
+export FONTCONFIG_NO_PKG_CONFIG=on
+
 # No stripping implemented (see https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-2260007943).
 
 echo "Starting aarch64-unknown-linux-musl build"
