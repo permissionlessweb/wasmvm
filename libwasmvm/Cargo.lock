@@ -2431,7 +2431,7 @@ dependencies = [
 [[package]]
 name = "headstash-randomness"
 version = "0.1.0"
-source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#54dd1e1751dd9bcb99f9a1de78505727d1cb8a48"
+source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#7e1c24d83b2a36378df35488721328800ccaa32f"
 dependencies = [
  "blake3",
  "rand 0.8.5",
@@ -6467,7 +6467,7 @@ dependencies = [
 [[package]]
 name = "zk-headstash"
 version = "0.0.1"
-source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#54dd1e1751dd9bcb99f9a1de78505727d1cb8a48"
+source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#7e1c24d83b2a36378df35488721328800ccaa32f"
 dependencies = [
  "aes",
  "anybuf",
