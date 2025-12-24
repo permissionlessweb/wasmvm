@@ -53,6 +53,13 @@ enum GoError {
 };
 typedef int32_t GoError;
 
+enum ErrnoValue {
+  ErrnoValue_Success = 0,
+  ErrnoValue_Other = 1,
+  ErrnoValue_OutOfGas = 2,
+};
+typedef int32_t ErrnoValue;
+
 typedef struct Option_UnmanagedVector Option_UnmanagedVector;
 
 typedef struct cache_t {
@@ -115,7 +122,7 @@ typedef struct ByteSliceView {
  *
  * ```
  * # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
- * #[no_mangle]
+ * #[unsafe(no_mangle)]
  * pub extern "C" fn save_wasm_to_cache(
  *     cache: *mut cache_t,
  *     wasm: ByteSliceView,
