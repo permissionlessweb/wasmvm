@@ -768,12 +768,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -797,7 +797,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -807,7 +807,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "base64",
  "bech32",
@@ -831,7 +831,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "bech32",
  "blake2",
@@ -860,7 +860,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -1000,7 +1000,7 @@ dependencies = [
 [[package]]
 name = "cw-schema"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "cw-schema-derive",
  "indexmap 2.12.1",
@@ -1014,7 +1014,7 @@ dependencies = [
 [[package]]
 name = "cw-schema-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d6c84aa2990bc543ef963f53d0eecb1e0dd4d51a"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#d8042f15d50ce91049c2cb7e83b33f5b2f78282c"
 dependencies = [
  "heck 0.5.0",
  "itertools 0.13.0",
@@ -1601,7 +1601,7 @@ dependencies = [
 [[package]]
 name = "halo2-base"
 version = "0.4.1"
-source = "git+https://github.com/permissionlessweb/halo2-lib?branch=mvp#15575761596f6a869a46d41bb2447c037ae67d9e"
+source = "git+https://github.com/permissionlessweb/halo2-lib?branch=mvp#dc7da97420b6d5d4c3a22931491125126f300934"
 dependencies = [
  "ark-std 0.3.0",
  "getset",
@@ -2522,9 +2522,9 @@ dependencies = [
 
 [[package]]
 name = "poseidon-primitives"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd95570f7ea849b4187298b5bb229643e44e1d47ddf3979d0db8a1c28be26a8"
+checksum = "6e4aaeda7a092e21165cc5f0cbc738e72a46f31c03c3cbd87b71ceae9d2d93bc"
 dependencies = [
  "bitvec",
  "ff",
@@ -4651,7 +4651,7 @@ dependencies = [
 [[package]]
 name = "zk-headstash"
 version = "0.0.1"
-source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#ff99915c1a430668b40604f62d6802870d722432"
+source = "git+https://github.com/hard-nett/airdrop?branch=airdrop-cycle-2#3b2d7837c05ba16e560a169c7a47bd416d683df4"
 dependencies = [
  "aes",
  "anybuf",
