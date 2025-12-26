@@ -1,5 +1,55 @@
+# Zk-WasmVM: Cosmwasm-VM paried with generic plonk verification key bindings
+
+## TODO
+
+- checksum on upload response
+- allow optional wasm on upload
+- query by checksum
+- define serialization of verifying key
+
+```rs
+// generic `VerifyingKey` struct/trait for zk-wasmvm:
+// - ensures contracts implement `verify`
+
+```
+
+## Overview
+
+## Specification
+
+| Name     | Type       | Contains |   Description | Use Location |
+|----------|-------------|--------------------------------------|--------------------------------------|------------|
+| **CosmwasmCircuit** | Circuits define the private witnesses and compose the constraints to create the verifying and proving keys. This not needed during proof verification, only during proof or vk/pk generation. |  |  |  |
+| **Params** |  Params define the values specific to a circuit, and contain the necessary data to define a circuit verifying key `vk`. Each halo2 circuit is similar, but dependent on the constant `K`, so when storing a circuits verifying key, we need specify the `K` value.  | `K`, `vk`  | | `zk-wasmvm` |
+| **VerifyingKey** | Verifying keys are used for generating proofs for specific circuit instances. Each circuit hash its own set of keys, and in order to verify proofs, the vm layer must have access to the verification keys, along with the inputs required for proof verification (the proof bytes iteself and any public instances). |  | |  |
+| **ProvingKey** |  Proving keys are used to generate proofs! These are stored client side, and are separate from proving keys. |    | |  |
+| **Instance** |Instances are public inputs required to be provided along with a proof and a proving key in order to proove a statement.. under the hood we require instance values to be `pasta_curves::Fp`, so when storing a circuits verifying key, we need to specify how many instances a circuit expects, allowing us to generically verify circuits proofs within the vm.  Smart contracts can be programmed to define instances from the vm's environment such as block heights, light client headers, and other data from the chains application state, unlocking interesteing trust assumptions with zk-circuit design.  |  |  |  |
+| **Proof** |  A proof is a value generated from a specific circuits proving keys, involving the private (witness) values. Proofs are a Vec<u8> of bytes. Our vm has a designated Proof definition to use as a generic wrapper for proofs in the vm. Specifically, we mirror default halo2 plonk proof functionality and define a proof that implements create and verify, so that we can pass in generic circuit and instance values and create a proof via plonk create proof  |  ||  |
+
+### Storage
+
+Like contracts, there is a dedicated storage layer for circuit keys in the vm. Keys can be stored with or without smart contracts. These keys are pinned to a dedicated caching layer by default, and governance can control the module parameters for who has permissions for uploading verifying keys.
+
+### Serializing And Deserializing
+
+We must define the canonical serialization and deserialization for circuits in order for us to have a fully programmable vm layer for proofs circuits, as we do with stateful applications via cosmwasm. Each circuit bytes is expected to atleast define a verify function used for haalo2 circuit verify keys, so that our vm can
+
+ Specifically, we require all proofs to be halo2 circuits, and application developers to define the type definition for the following:
+
+- K: define the value set for plonk circuit verifying-key params
+- Instances: define a number of public provided to a verifying key. We require smart contract developers to provide the array of `vesta::Scalar` values so that we have a canonical proof deserialization and request.
+
+| Byte     | Type       | Description|   Value | |
+|----------|-------------|--------------------------------------|--------------------------------------|------------|
+| 0x01 | version byte | always start with version byte for separator   |  |  |
+| 0x02 | K constant |  circuits plonk parameters K constant   |  |  |
+| 0x03 | instances length    |  |  |
+|| fixed-commitment count ||||
+
+### API
 
 ## Zk-Diagram
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    HALO2 VERIFYING KEY LIFECYCLE                         │
@@ -260,3 +310,4 @@
 │  • Zero-knowledge proofs in CosmWasm smart contracts                    │
 │  • Gas-metered cryptographic verification                                │
 └─────────────────────────────────────────────────────────────────────────┘
+```
