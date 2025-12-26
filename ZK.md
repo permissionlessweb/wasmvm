@@ -48,6 +48,11 @@ We must define the canonical serialization and deserialization for circuits in o
 
 ### API
 
+#### `MsgStoreCodeWithVk`
+
+| Byte     | Type       | Description|   Value | |
+|----------|-------------|--------------------------------------|--------------------------------------|------------|
+
 ## Zk-Diagram
 
 ```
@@ -111,7 +116,7 @@ We must define the canonical serialization and deserialization for circuits in o
     │  Keeper: StoreCodeWithVk()               │
     │                                          │
     │  1. Validate WASM                        │
-    │  2. validate_vk_bytes(vk_byte_code)     │
+    │  2. check_vk(vk_byte_code)     │
     │  3. Compute checksums                    │
     │     - wasm_checksum = sha256(wasm)      │
     │     - vk_checksum = sha256(vk)          │

@@ -420,7 +420,6 @@ struct UnmanagedVector store_code_with_vk(struct cache_t *cache,
                                           struct ByteSliceView wasm,
                                           bool unchecked,
                                           struct ByteSliceView vk,
-                                          struct ByteSliceView vk_spec,
                                           struct UnmanagedVector *error_msg);
 
 void remove_vk(struct cache_t *cache,

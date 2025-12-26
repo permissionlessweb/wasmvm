@@ -9,7 +9,9 @@ use serde::Serialize;
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
-use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
+use crate::error::{
+    clear_error, handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error,
+};
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
@@ -53,8 +55,7 @@ pub extern "C" fn store_code_with_vk(
     cache: *mut cache_t,
     wasm: ByteSliceView, // VK bytes (optional, can be null/empty)
     unchecked: bool,
-    vk: ByteSliceView,      // VK bytes (optional, can be null/empty)
-    vk_spec: ByteSliceView, // VK bytes (optional, can be null/empty)
+    vk: ByteSliceView, // VK bytes (optional, can be null/empty)
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -68,8 +69,25 @@ pub extern "C" fn store_code_with_vk(
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
 
-    let checksum = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(checksum))
+    // Handle result, combining two checksums into a single byte array
+    match r {
+        Ok([c1, c2]) => {
+            clear_error();
+            // Combine the two checksums: we assume they are both 32-byte arrays, so concatenate into one string
+            let mut cc = Vec::with_capacity(64);
+            cc.extend_from_slice(c1.as_slice());
+            cc.extend_from_slice(c2.as_slice());
+            UnmanagedVector::new(Some(cc))
+        }
+        Err(e) => {
+            if let Some(err) = error_msg {
+                // Convert error to string and assign to err
+                let error_string = format!("{}", e);
+                *err = UnmanagedVector::new(Some(error_string.into_bytes()));
+            }
+            UnmanagedVector::new(None)
+        }
+    }
 }
 
 fn do_store_code_with_vk(
@@ -77,7 +95,7 @@ fn do_store_code_with_vk(
     wasm: ByteSliceView,
     vk: ByteSliceView,
     unchecked: bool,
-) -> Result<Checksum, Error> {
+) -> Result<[Checksum; 2], Error> {
     let wasm = wasm.read().unwrap_or_default();
     let vk = vk.read().unwrap_or_default();
 
