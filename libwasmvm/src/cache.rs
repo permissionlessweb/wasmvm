@@ -51,9 +51,10 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
 #[unsafe(no_mangle)]
 pub extern "C" fn store_code_with_vk(
     cache: *mut cache_t,
-    wasm: ByteSliceView,
+    wasm: ByteSliceView, // VK bytes (optional, can be null/empty)
     unchecked: bool,
-    vk: ByteSliceView, // VK bytes (optional, can be null/empty)
+    vk: ByteSliceView,      // VK bytes (optional, can be null/empty)
+    vk_spec: ByteSliceView, // VK bytes (optional, can be null/empty)
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -66,6 +67,7 @@ pub extern "C" fn store_code_with_vk(
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
+
     let checksum = handle_c_error_binary(r, error_msg);
     UnmanagedVector::new(Some(checksum))
 }
@@ -76,8 +78,12 @@ fn do_store_code_with_vk(
     vk: ByteSliceView,
     unchecked: bool,
 ) -> Result<Checksum, Error> {
-    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    let wasm = wasm.read().unwrap_or_default();
     let vk = vk.read().unwrap_or_default();
+
+    if vk.len() == 0 && wasm.len() == 0 {
+        return Err(Error::panic());
+    };
 
     let bundle = if vk.is_empty() {
         CodeBundle::wasm_only(wasm.to_vec())
