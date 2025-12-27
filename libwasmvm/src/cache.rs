@@ -53,7 +53,7 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
 #[unsafe(no_mangle)]
 pub extern "C" fn store_code_with_vk(
     cache: *mut cache_t,
-    wasm: ByteSliceView, // VK bytes (optional, can be null/empty)
+    wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
     unchecked: bool,
     vk: ByteSliceView, // VK bytes (optional, can be null/empty)
     error_msg: Option<&mut UnmanagedVector>,
@@ -103,21 +103,14 @@ fn do_store_code_with_vk(
         return Err(Error::panic());
     };
 
-    let bundle = if vk.is_empty() {
-        CodeBundle::wasm_only(wasm.to_vec())
-    } else {
-        // Parse VK bytes into SerializedVK
-        // Format: [circuit_type: u8][vk_bytes]
-        let vk = SerializedVK {
-            bytes: vk[1..].to_vec(),
-            circuit_type: CircuitType::Generic,
-            hash: [0; 32],
-            size_bytes: vk[1..].len(),
-        };
-        CodeBundle::with_vk(wasm.to_vec(), vk.bytes)
-    };
-
-    Ok(cache.store_code_with_vk(bundle, !unchecked, true)?)
+    Ok(cache.store_code_with_vk(
+        match vk.is_empty() {
+            true => CodeBundle::wasm_only(wasm.to_vec()),
+            false => CodeBundle::with_vk(wasm.to_vec(), vk.to_vec()),
+        },
+        !unchecked,
+        true,
+    )?)
 }
 
 #[unsafe(no_mangle)]

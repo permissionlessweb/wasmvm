@@ -91,6 +91,28 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
+func (vm *VM) SimulateStoreCodeWithVk(code, vkCode WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
+	gasCost := compileCost(code)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	combined, err := api.StoreCodeWithVk(vm.cache, code, vkCode, false)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	const expectedLen = 2 * types.ChecksumLen
+	if len(combined) != expectedLen {
+		return nil, gasCost, fmt.Errorf("invalid combined checksum length: expected %d, got %d", expectedLen, len(combined))
+	}
+	first := combined[:types.ChecksumLen]
+	second := combined[types.ChecksumLen:]
+	return []Checksum{first, second}, gasCost, nil
+}
+
+// SimulateStoreCode is the same as StoreCode but does not actually store the code.
+// This is useful for simulating all the validations happening in StoreCode without actually
+// writing anything to disk.
 func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {

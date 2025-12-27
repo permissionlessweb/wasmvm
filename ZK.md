@@ -2,10 +2,7 @@
 
 ## TODO
 
-- checksum on upload response
-- allow optional wasm on upload
 - query by checksum
-- define serialization of verifying key
 
 ```rs
 // generic `VerifyingKey` struct/trait for zk-wasmvm:
@@ -32,19 +29,17 @@ Like contracts, there is a dedicated storage layer for circuit keys in the vm. K
 
 ### Serializing And Deserializing
 
-We must define the canonical serialization and deserialization for circuits in order for us to have a fully programmable vm layer for proofs circuits, as we do with stateful applications via cosmwasm. Each circuit bytes is expected to atleast define a verify function used for haalo2 circuit verify keys, so that our vm can
+We must define the canonical serialization and deserialization for circuits in order for us to have a fully programmable vm layer for proofs circuits, as we do with stateful applications via cosmwasm. Each circuit top two bytes is reserved and expected for cirucit builders to append to compiled plonk verifyingkeys. Specifically, we reserve the top two most bytes in the following order:
 
- Specifically, we require all proofs to be halo2 circuits, and application developers to define the type definition for the following:
+| Byte     | Type       | Description|   Value | |
+|----------|-------------|--------------------------------------|--------------------------------------|------------|
+| 0x01 | `V` version byte | always start with version byte for separator (used for VM migration)   |  |  |
+| 0x02 | `I` constant |  the array length for a circuits required instances (public inputs)   |  |  |
 
 - K: define the value set for plonk circuit verifying-key params
 - Instances: define a number of public provided to a verifying key. We require smart contract developers to provide the array of `vesta::Scalar` values so that we have a canonical proof deserialization and request.
 
-| Byte     | Type       | Description|   Value | |
-|----------|-------------|--------------------------------------|--------------------------------------|------------|
-| 0x01 | version byte | always start with version byte for separator   |  |  |
-| 0x02 | K constant |  circuits plonk parameters K constant   |  |  |
-| 0x03 | instances length    |  |  |
-|| fixed-commitment count ||||
+> note version bytes are assigned to compiled contract automatically, and we do not need to dedicate a byte for a circuits param constant `K`, as it is available as an object in a deserialized `VerifyingKey` `Params`.
 
 ### API
 

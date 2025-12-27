@@ -546,12 +546,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -575,7 +575,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -585,7 +585,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "base64",
  "bech32",
@@ -609,7 +609,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "bech32",
  "blake2",
@@ -639,7 +639,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -751,7 +751,7 @@ dependencies = [
 [[package]]
 name = "cw-schema"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "cw-schema-derive",
  "indexmap 2.12.1",
@@ -765,7 +765,7 @@ dependencies = [
 [[package]]
 name = "cw-schema-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#7ad9ce541106b0942177daf421c747378bf1965b"
+source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#74114916a0463396cf9aa4361681e0263a7fde99"
 dependencies = [
  "heck",
  "itertools",
