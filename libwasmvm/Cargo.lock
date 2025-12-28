@@ -546,12 +546,10 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -575,7 +573,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -585,7 +582,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "base64",
  "bech32",
@@ -609,7 +605,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "bech32",
  "blake2",
@@ -639,7 +634,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -751,7 +745,6 @@ dependencies = [
 [[package]]
 name = "cw-schema"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "cw-schema-derive",
  "indexmap 2.12.1",
@@ -765,7 +758,6 @@ dependencies = [
 [[package]]
 name = "cw-schema-derive"
 version = "3.0.3-dev"
-source = "git+https://github.com/permissionlessweb/cosmwasm?branch=mvp#4f7180bd940781790170e364043e47bebe77005b"
 dependencies = [
  "heck",
  "itertools",
@@ -1246,7 +1238,6 @@ dependencies = [
 [[package]]
 name = "halo2_proofs"
 version = "0.3.2"
-source = "git+https://github.com/permissionlessweb/halo2?branch=mvp#a331093234caf051613c44363a5f69b6ed2b0c1f"
 dependencies = [
  "blake2b_simd",
  "ff",
