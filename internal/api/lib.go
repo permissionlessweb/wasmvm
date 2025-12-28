@@ -93,6 +93,7 @@ func StoreCodeWithVk(cache Cache, wasm, vk []byte, unchecked bool) ([]byte, erro
 	defer runtime.KeepAlive(vk)
 	errmsg := uninitializedUnmanagedVector()
 	checksum, err := C.store_code_with_vk(cache.ptr, w, cbool(unchecked), v, &errmsg)
+	fmt.Printf("StoreCodeWithVk - checksum: %v\n", checksum)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
