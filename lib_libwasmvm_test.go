@@ -29,6 +29,7 @@ var testingCapabilities = []string{"staking", "stargate", "iterator"}
 const (
 	cyberpunkTestContract = "./testdata/cyberpunk.wasm"
 	hackatomTestContract  = "./testdata/hackatom.wasm"
+	noRickTestCircuitVK   = "./testdata/vk_combined.bin"
 )
 
 func withVM(t *testing.T) *VM {
@@ -50,6 +51,49 @@ func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	checksum, _, err := vm.StoreCode(wasm, testingGasLimit)
 	require.NoError(t, err)
 	return checksum
+}
+
+func TestStoreCodeAndVk(t *testing.T) {
+	vm := withVM(t)
+
+	// Valid hackatom contract & no_rick vk
+	{
+		wasm, err := os.ReadFile(hackatomTestContract)
+		require.NoError(t, err)
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		_, _, err = vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		require.NoError(t, err)
+	}
+
+	// Valid cyberpunk contract
+	{
+		wasm, err := os.ReadFile(cyberpunkTestContract)
+		require.NoError(t, err)
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		_, _, err = vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		require.NoError(t, err)
+	}
+	// // Valid Wasm with no exports
+	{
+		// echo '(module)' | wat2wasm - -o empty.wasm
+		// hexdump -C < empty.wasm
+
+		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+		// vk, err := os.ReadFile(noRickTestCircuitVK)
+		// require.NoError(t, err)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
+		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
+	}
+	// No Wasm, No vk
+	{
+		wasm := []byte("tete")
+		vk := []byte("")
+		_, _, err := vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		require.ErrorContains(t, err, "must provide either wasm or vk bytes")
+	}
+
 }
 
 func TestStoreCode(t *testing.T) {
@@ -103,6 +147,52 @@ func TestStoreCode(t *testing.T) {
 	}
 }
 
+func TestSimulateStoreCodeWithVk(t *testing.T) {
+	vm := withVM(t)
+
+	hackatom, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	noRickVk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	specs := map[string]struct {
+		wasm []byte
+		vk   []byte
+		err  string
+	}{
+		"valid hackatom contract": {
+			wasm: hackatom,
+			vk:   noRickVk,
+			err:  "",
+		},
+		"no wasm": {
+			wasm: []byte("foobar"),
+			vk:   noRickVk,
+			err:  "invalid combined checksum length",
+		},
+		"no vk": {
+			wasm: hackatom,
+			vk:   []byte(""),
+			err:  "invalid combined checksum length",
+		},
+	}
+
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			checksum, _, err := vm.SimulateStoreCodeWithVk(spec.wasm, spec.vk, testingGasLimit)
+
+			if spec.err != "" {
+				assert.ErrorContains(t, err, spec.err)
+			} else {
+				require.NoError(t, err)
+				_, err = vm.GetCode(checksum[0])
+				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+				_, err = vm.GetCode(checksum[1])
+				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+			}
+		})
+	}
+}
 func TestSimulateStoreCode(t *testing.T) {
 	vm := withVM(t)
 

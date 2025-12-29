@@ -78,6 +78,13 @@ func (e NoSuchCode) Error() string {
 	return fmt.Sprintf("no such code: %d", e.CodeID)
 }
 
+type NoVkorWasm struct {
+}
+
+func (e NoVkorWasm) Error() string {
+	return "must provide either wasm or vk bytes"
+}
+
 type Unknown struct{}
 
 func (e Unknown) Error() string {

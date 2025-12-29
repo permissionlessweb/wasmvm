@@ -61,14 +61,29 @@ func (vm *VM) Cleanup() {
 func (vm *VM) StoreCodeWithVk(wasm, vk WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
 	gasCost := compileCost(wasm)
 	gasCost2 := compileCost(vk)
-	if gasLimit < gasCost+gasCost2 {
+	compositeGasLimit := gasCost + gasCost2
+	// fmt.Printf("gasCost: %v\n", gasCost)
+	// fmt.Printf("gasCost2: %v\n", gasCost2)
+	// fmt.Printf("gasLimit: %v\n", gasLimit)
+	fmt.Printf("compositeGasLimit: %v\n", compositeGasLimit)
+
+	if gasLimit < compositeGasLimit {
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
 	checksums, err := api.StoreCodeWithVk(vm.cache, wasm, vk, true)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	fmt.Printf("len(checksums): %v\n", len(checksums))
+	if len(checksums) < 64 {
+		return nil, gasCost, types.NoVkorWasm{}
 
+	}
 	first := checksums[:types.ChecksumLen]
 	second := checksums[types.ChecksumLen:]
+	// fmt.Printf("first: %v\n", first)
+	// fmt.Printf("second: %v\n", second)
 	return []Checksum{first, second}, gasCost, err
 }
 

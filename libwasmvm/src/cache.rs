@@ -3,7 +3,8 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::{Cache, CircuitType, CodeBundle, SerializedVK};
+use cosmwasm_vm::zk::check_vk;
+use cosmwasm_vm::{Cache, CircuitType, CodeBundle, HALO2_METADATA_LENGTH};
 
 use serde::Serialize;
 
@@ -73,7 +74,7 @@ pub extern "C" fn store_code_with_vk(
     match r {
         Ok([c1, c2]) => {
             clear_error();
-            // Combine the two checksums: we assume they are both 32-byte arrays, so concatenate into one string
+            // Always combine two 32-byte checksums into 64 bytes
             let mut cc = Vec::with_capacity(64);
             cc.extend_from_slice(c1.as_slice());
             cc.extend_from_slice(c2.as_slice());
@@ -96,21 +97,23 @@ fn do_store_code_with_vk(
     vk: ByteSliceView,
     unchecked: bool,
 ) -> Result<[Checksum; 2], Error> {
-    let wasm = wasm.read().unwrap_or_default();
-    let vk = vk.read().unwrap_or_default();
+    let w_bytes = wasm.read().unwrap_or_default();
+    let vk_bytes = vk.read().unwrap_or_default();
 
-    if vk.len() == 0 && wasm.len() == 0 {
-        return Err(Error::panic());
-    };
-
-    Ok(cache.store_code_with_vk(
-        match vk.is_empty() {
-            true => CodeBundle::wasm_only(wasm.to_vec()),
-            false => CodeBundle::with_vk(wasm.to_vec(), vk.to_vec()),
+    // must provide both wasm & vk
+    Ok(
+        match (vk_bytes.len() < HALO2_METADATA_LENGTH, w_bytes.len() == 0) {
+            (false, false) => {
+                let zk = check_vk(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
+                cache.store_code_with_vk(
+                    CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), &zk),
+                    !unchecked,
+                    true,
+                )?
+            }
+            _ => return Err(Error::panic()),
         },
-        !unchecked,
-        true,
-    )?)
+    )
 }
 
 #[unsafe(no_mangle)]
