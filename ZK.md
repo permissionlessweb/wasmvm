@@ -2,7 +2,9 @@
 
 ## TODO
 
-- query by checksum
+- query by checksum (map to storage by vk-id > checksum )
+- store just vk
+- deps.api.circuit
 
 ```rs
 // generic `VerifyingKey` struct/trait for zk-wasmvm:
@@ -33,8 +35,10 @@ We must define the canonical serialization and deserialization for circuits in o
 
 | Byte     | Type       | Description|   Value | |
 |----------|-------------|--------------------------------------|--------------------------------------|------------|
-| 0x01 | `V` version byte | always start with version byte for separator (used for VM migration)   |  |  |
-| 0x02 | `I` constant |  the array length for a circuits required instances (public inputs)   |  |  |
+| `0..vk_params.len()` | `vk_params` verifying key params |  |  |  |
+| `vk_params.len()..vk.len()` | `vk` verifying key bytes  |  |  |  |
+|  `2nd to last` | `V` version byte | first extended byte, version separator     |  |  |
+| `last` | `I` constant |  second extended byte, instance #  |  |  |
 
 - K: define the value set for plonk circuit verifying-key params
 - Instances: define a number of public provided to a verifying key. We require smart contract developers to provide the array of `vesta::Scalar` values so that we have a canonical proof deserialization and request.
@@ -47,6 +51,10 @@ We must define the canonical serialization and deserialization for circuits in o
 
 | Byte     | Type       | Description|   Value | |
 |----------|-------------|--------------------------------------|--------------------------------------|------------|
+
+### Cosmwasm Circuit Macro
+
+The `#[cosmwasm_circuit]` derive macro simplifies creating circuits for the CosmWasm ZK-VM. This guide shows you how to use it.
 
 ## Zk-Diagram
 
