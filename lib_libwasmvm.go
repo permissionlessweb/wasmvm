@@ -57,8 +57,8 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
-// StoreCodeWithVk will compile the Wasm code, and store the resulting compiled module, along with a halo2 circuit verifying key deserialized and pinned to memory.
-func (vm *VM) StoreCodeWithVk(wasm, vk WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
+// StoreCodeWithCircuit will compile the Wasm code, and store the resulting compiled module, along with a halo2 circuit verifying key deserialized and pinned to memory.
+func (vm *VM) StoreCodeWithCircuit(wasm, vk WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
 	gasCost := compileCost(wasm)
 	gasCost2 := compileCost(vk)
 	compositeGasLimit := gasCost + gasCost2
@@ -71,7 +71,7 @@ func (vm *VM) StoreCodeWithVk(wasm, vk WasmCode, gasLimit uint64) ([]Checksum, u
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	checksums, err := api.StoreCodeWithVk(vm.cache, wasm, vk, true)
+	checksums, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true)
 	if err != nil {
 		return nil, gasCost, err
 	}
@@ -110,13 +110,13 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
-func (vm *VM) SimulateStoreCodeWithVk(code, vkCode WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
+func (vm *VM) SimulateStoreCodeWithCircuit(code, vkCode WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	combined, err := api.StoreCodeWithVk(vm.cache, code, vkCode, false)
+	combined, err := api.StoreCodeWithCircuit(vm.cache, code, vkCode, false)
 	if err != nil {
 		return nil, gasCost, err
 	}
@@ -163,12 +163,24 @@ func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
 	return api.GetCode(vm.cache, checksum)
 }
 
+// GetCircuit
+func (vm *VM) GetCircuit(checksum Checksum) (CircuitBinary, error) {
+	return api.GetCircuit(vm.cache, checksum)
+}
+
 // Pin pins a code to an in-memory cache, such that is
 // always loaded quickly when executed.
 // Pin is idempotent.
 func (vm *VM) Pin(checksum Checksum) error {
 	return api.Pin(vm.cache, checksum)
 }
+
+// // Pin pins a code to an in-memory cache, such that is
+// // always loaded quickly when executed.
+// // Pin is idempotent.
+// func (vm *VM) PinCircuit(checksum Checksum) error {
+// 	return api.PinCircuit(vm.cache, checksum)
+// }
 
 // Unpin removes the guarantee of a contract to be pinned (see Pin).
 // After calling this, the code may or may not remain in memory depending on
@@ -177,6 +189,14 @@ func (vm *VM) Pin(checksum Checksum) error {
 func (vm *VM) Unpin(checksum Checksum) error {
 	return api.Unpin(vm.cache, checksum)
 }
+
+// // Unpin removes the guarantee of a contract to be pinned (see Pin).
+// // After calling this, the code may or may not remain in memory depending on
+// // the implementor's choice.
+// // Unpin is idempotent.
+// func (vm *VM) UnpinCircuit(checksum Checksum) error {
+// 	return api.UnpinCircuit(vm.cache, checksum)
+// }
 
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).

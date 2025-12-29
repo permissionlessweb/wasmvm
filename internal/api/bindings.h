@@ -53,8 +53,6 @@ enum ErrnoValue {
 };
 typedef int32_t ErrnoValue;
 
-typedef struct Option_UnmanagedVector Option_UnmanagedVector;
-
 typedef struct cache_t {
 
 } cache_t;
@@ -416,29 +414,21 @@ typedef struct GasReport {
 
 struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector store_code_with_vk(struct cache_t *cache,
-                                          struct ByteSliceView wasm,
-                                          bool unchecked,
-                                          struct ByteSliceView vk,
-                                          struct UnmanagedVector *error_msg);
-
-void remove_vk(struct cache_t *cache,
-               struct ByteSliceView checksum,
-               struct UnmanagedVector *error_msg);
-
-bool has_verifying_key(struct cache_t *cache,
-                       struct ByteSliceView checksum,
-                       struct UnmanagedVector *error_msg);
-
-struct Option_UnmanagedVector get_verifying_key(struct cache_t *cache,
-                                                struct ByteSliceView checksum,
-                                                struct UnmanagedVector *error_msg);
+struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
+                                               struct ByteSliceView wasm,
+                                               bool unchecked,
+                                               struct ByteSliceView vk,
+                                               struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector store_code(struct cache_t *cache,
                                   struct ByteSliceView wasm,
                                   bool checked,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
+
+void remove_circuit(struct cache_t *cache,
+                    struct ByteSliceView checksum,
+                    struct UnmanagedVector *error_msg);
 
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,
@@ -448,9 +438,21 @@ struct UnmanagedVector load_wasm(struct cache_t *cache,
                                  struct ByteSliceView checksum,
                                  struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector load_circuit(struct cache_t *cache,
+                                    struct ByteSliceView checksum,
+                                    struct UnmanagedVector *error_msg);
+
 void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
+void pin_circuit(struct cache_t *cache,
+                 struct ByteSliceView checksum,
+                 struct UnmanagedVector *error_msg);
+
 void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+
+void unpin_circuit(struct cache_t *cache,
+                   struct ByteSliceView checksum,
+                   struct UnmanagedVector *error_msg);
 
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,

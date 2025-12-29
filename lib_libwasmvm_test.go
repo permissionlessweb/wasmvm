@@ -62,7 +62,7 @@ func TestStoreCodeAndVk(t *testing.T) {
 		require.NoError(t, err)
 		vk, err := os.ReadFile(noRickTestCircuitVK)
 		require.NoError(t, err)
-		_, _, err = vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
 		require.NoError(t, err)
 	}
 
@@ -72,7 +72,7 @@ func TestStoreCodeAndVk(t *testing.T) {
 		require.NoError(t, err)
 		vk, err := os.ReadFile(noRickTestCircuitVK)
 		require.NoError(t, err)
-		_, _, err = vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
 		require.NoError(t, err)
 	}
 	// // Valid Wasm with no exports
@@ -90,7 +90,7 @@ func TestStoreCodeAndVk(t *testing.T) {
 	{
 		wasm := []byte("tete")
 		vk := []byte("")
-		_, _, err := vm.StoreCodeWithVk(wasm, vk, testingGasLimit)
+		_, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
 		require.ErrorContains(t, err, "must provide either wasm or vk bytes")
 	}
 
@@ -147,7 +147,7 @@ func TestStoreCode(t *testing.T) {
 	}
 }
 
-func TestSimulateStoreCodeWithVk(t *testing.T) {
+func TestSimulateStoreCodeWithCircuit(t *testing.T) {
 	vm := withVM(t)
 
 	hackatom, err := os.ReadFile(hackatomTestContract)
@@ -179,7 +179,7 @@ func TestSimulateStoreCodeWithVk(t *testing.T) {
 
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			checksum, _, err := vm.SimulateStoreCodeWithVk(spec.wasm, spec.vk, testingGasLimit)
+			checksum, _, err := vm.SimulateStoreCodeWithCircuit(spec.wasm, spec.vk, testingGasLimit)
 
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)

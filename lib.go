@@ -17,6 +17,9 @@ type Checksum = types.Checksum
 // WasmCode is an alias for raw bytes of the wasm compiled code
 type WasmCode []byte
 
+// CircuitBinary is an alias for raw bytes of the zk-proof circuit labeled verifying key binary
+type CircuitBinary []byte
+
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
 type KVStore = types.KVStore
 

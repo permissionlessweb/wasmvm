@@ -33,12 +33,17 @@ Like contracts, there is a dedicated storage layer for circuit keys in the vm. K
 
 We must define the canonical serialization and deserialization for circuits in order for us to have a fully programmable vm layer for proofs circuits, as we do with stateful applications via cosmwasm. Each circuit top two bytes is reserved and expected for cirucit builders to append to compiled plonk verifyingkeys. Specifically, we reserve the top two most bytes in the following order:
 
+### BINARY FOOTER METADATA
+
+Any compilation of circuit keys for zk-wasmvm must have appended 10 bytes to the file footer, as the vm expect these paramater bytes to be available for specifying specific parameters for each circuit.
+
 | Byte     | Type       | Description|   Value | |
-|----------|-------------|--------------------------------------|--------------------------------------|------------|
-| `0..vk_params.len()` | `vk_params` verifying key params |  |  |  |
-| `vk_params.len()..vk.len()` | `vk` verifying key bytes  |  |  |  |
-|  `2nd to last` | `V` version byte | first extended byte, version separator     |  |  |
-| `last` | `I` constant |  second extended byte, instance #  |  |  |
+|----------|-------------|--------------------------------------|-------------------------------------|------------|
+| `0` | `V` cosmwasm-vm version identifier |  |  |  |
+| `1` | `I` # of public instances circuit requires to validate proof |  |  |  |
+|    |  `vk_params.len()` | little-eidian byte length of vk-params    |  |  |
+|   | `vk.len()`  | ittle-eidian  byte length of vk  |  |  |
+|**TOTAL = 10 bits** |    |   |  |  |
 
 - K: define the value set for plonk circuit verifying-key params
 - Instances: define a number of public provided to a verifying key. We require smart contract developers to provide the array of `vesta::Scalar` values so that we have a canonical proof deserialization and request.
@@ -47,7 +52,7 @@ We must define the canonical serialization and deserialization for circuits in o
 
 ### API
 
-#### `MsgStoreCodeWithVk`
+#### `MsgStoreCodeWithCircuit`
 
 | Byte     | Type       | Description|   Value | |
 |----------|-------------|--------------------------------------|--------------------------------------|------------|
@@ -105,7 +110,7 @@ The `#[cosmwasm_circuit]` derive macro simplifies creating circuits for the Cosm
              │ CLI Command
              ▼
     ┌──────────────────────────────────────────┐
-    │  MsgStoreCodeWithVk                      │
+    │  MsgStoreCodeWithCircuit                      │
     │  {                                       │
     │    wasm_byte_code: [...]                 │
     │    vk_byte_code: [Params][VK]           │
@@ -116,7 +121,7 @@ The `#[cosmwasm_circuit]` derive macro simplifies creating circuits for the Cosm
                        │ Blockchain Transaction
                        ▼
     ┌──────────────────────────────────────────┐
-    │  Keeper: StoreCodeWithVk()               │
+    │  Keeper: StoreCodeWithCircuit()               │
     │                                          │
     │  1. Validate WASM                        │
     │  2. check_vk(vk_byte_code)     │
@@ -186,7 +191,7 @@ The `#[cosmwasm_circuit]` derive macro simplifies creating circuits for the Cosm
              │ High-frequency verification
              ▼
     ┌──────────────────────────────────────────┐
-    │  Cache::pin_vk(checksum)                 │
+    │  Cache::pin_circuit(checksum)                 │
     │                                          │
     │  1. load_vk_from_disk()                  │
     │     ├─ Read file from cache              │
