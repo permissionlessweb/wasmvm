@@ -110,13 +110,13 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
-func (vm *VM) SimulateStoreCodeWithCircuit(code, vkCode WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
-	gasCost := compileCost(code)
+func (vm *VM) SimulateStoreCodeWithCircuit(code, zk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
+	gasCost := compileCost(zk)
 	if gasLimit < gasCost {
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	combined, err := api.StoreCodeWithCircuit(vm.cache, code, vkCode, false)
+	combined, err := api.StoreCodeWithCircuit(vm.cache, code, zk, false)
 	if err != nil {
 		return nil, gasCost, err
 	}
@@ -885,7 +885,7 @@ func (vm *VM) IBC2PacketSend(
 	return &result, gasReport.UsedInternally, nil
 }
 
-func compileCost(code WasmCode) uint64 {
+func compileCost(code []byte) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
 	// https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
