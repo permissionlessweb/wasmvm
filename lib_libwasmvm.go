@@ -57,8 +57,18 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+func (vm *VM) StoreCircuit(zk CircuitBinary, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCost(zk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	checksum, err := api.StoreCircuit(vm.cache, zk, true)
+	return checksum, gasCost, err
+}
+
 // StoreCodeWithCircuit will compile the Wasm code, and store the resulting compiled module, along with a halo2 circuit verifying key deserialized and pinned to memory.
-func (vm *VM) StoreCodeWithCircuit(wasm, vk WasmCode, gasLimit uint64) ([]Checksum, uint64, error) {
+func (vm *VM) StoreCodeWithCircuit(wasm WasmCode, vk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
 	gasCost := compileCost(wasm)
 	gasCost2 := compileCost(vk)
 	compositeGasLimit := gasCost + gasCost2
@@ -110,7 +120,7 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
-func (vm *VM) SimulateStoreCodeWithCircuit(code, zk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
+func (vm *VM) SimulateStoreCodeWithCircuit(code WasmCode, zk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
 	gasCost := compileCost(zk)
 	if gasLimit < gasCost {
 		return nil, gasCost, types.OutOfGasError{}
@@ -148,6 +158,12 @@ func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return api.StoreCodeUnchecked(vm.cache, code)
 }
 
+// StoreCodeUnchecked is the same as StoreCode but skips static validation checks and charges no gas.
+// Use this for adding code that was checked before, particularly in the case of state sync.
+func (vm *VM) StoreCircuitUnchecked(code CircuitBinary) (Checksum, error) {
+	return api.StoreCircuitUnchecked(vm.cache, code)
+}
+
 func (vm *VM) RemoveCode(checksum Checksum) error {
 	return api.RemoveCode(vm.cache, checksum)
 }
@@ -175,12 +191,12 @@ func (vm *VM) Pin(checksum Checksum) error {
 	return api.Pin(vm.cache, checksum)
 }
 
-// // Pin pins a code to an in-memory cache, such that is
-// // always loaded quickly when executed.
-// // Pin is idempotent.
-// func (vm *VM) PinCircuit(checksum Checksum) error {
-// 	return api.PinCircuit(vm.cache, checksum)
-// }
+// Pin pins a code to an in-memory cache, such that is
+// always loaded quickly when executed.
+// Pin is idempotent.
+func (vm *VM) PinCircuit(checksum Checksum) error {
+	return api.PinCircuit(vm.cache, checksum)
+}
 
 // Unpin removes the guarantee of a contract to be pinned (see Pin).
 // After calling this, the code may or may not remain in memory depending on
@@ -190,13 +206,13 @@ func (vm *VM) Unpin(checksum Checksum) error {
 	return api.Unpin(vm.cache, checksum)
 }
 
-// // Unpin removes the guarantee of a contract to be pinned (see Pin).
-// // After calling this, the code may or may not remain in memory depending on
-// // the implementor's choice.
-// // Unpin is idempotent.
-// func (vm *VM) UnpinCircuit(checksum Checksum) error {
-// 	return api.UnpinCircuit(vm.cache, checksum)
-// }
+// Unpin removes the guarantee of a contract to be pinned (see Pin).
+// After calling this, the code may or may not remain in memory depending on
+// the implementor's choice.
+// Unpin is idempotent.
+func (vm *VM) UnpinCircuit(checksum Checksum) error {
+	return api.UnpinCircuit(vm.cache, checksum)
+}
 
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).

@@ -111,16 +111,27 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
-// func StoreCircuit(cache Cache, vk []byte, persist bool) ([]byte, error) {
-// 	w := makeView(vk)
-// 	defer runtime.KeepAlive(vk)
-// 	errmsg := uninitializedUnmanagedVector()
-// 	checksum, err := C.store_circuit(cache.ptr, w, cbool(true), cbool(persist), &errmsg)
-// 	if err != nil {
-// 		return nil, errorWithMessage(err, errmsg)
-// 	}
-// 	return copyAndDestroyUnmanagedVector(checksum), nil
-// }
+func StoreCircuit(cache Cache, vk []byte, persist bool) ([]byte, error) {
+	w := makeView(vk)
+	defer runtime.KeepAlive(vk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_circuit(cache.ptr, w, cbool(persist), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
+func StoreCircuitUnchecked(cache Cache, zk []byte) ([]byte, error) {
+	z := makeView(zk)
+	defer runtime.KeepAlive(zk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_circuit(cache.ptr, z, cbool(true), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
 
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)

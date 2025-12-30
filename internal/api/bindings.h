@@ -420,6 +420,11 @@ struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
                                                struct ByteSliceView vk,
                                                struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector store_circuit(struct cache_t *cache,
+                                     struct ByteSliceView wasm,
+                                     bool persist,
+                                     struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector store_code(struct cache_t *cache,
                                   struct ByteSliceView wasm,
                                   bool checked,

@@ -106,7 +106,7 @@ fn do_store_code_with_circuit(
             (false, false) => {
                 let (zk, hash) = check_vk(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
                 cache.store_code_with_circuit(
-                    CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), &zk, hash),
+                    &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), &zk, hash),
                     !unchecked,
                     true,
                 )?
@@ -114,6 +114,34 @@ fn do_store_code_with_circuit(
             _ => return Err(Error::panic()),
         },
     )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn store_circuit(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    persist: bool,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_store_circuit(c, wasm, persist)))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_store_circuit", err);
+                Err(Error::panic())
+            }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let checksum = handle_c_error_binary(r, error_msg);
+    UnmanagedVector::new(Some(checksum))
+}
+
+fn do_store_circuit(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    zk: ByteSliceView,
+    persist: bool,
+) -> Result<Checksum, Error> {
+    let wasm = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    Ok(cache.store_circuit(wasm, persist)?)
 }
 
 #[unsafe(no_mangle)]

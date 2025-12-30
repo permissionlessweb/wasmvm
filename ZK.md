@@ -2,9 +2,7 @@
 
 ## TODO
 
-- query by checksum (map to storage by vk-id > checksum )
-- store just vk
-- deps.api.circuit
+
 
 ```rs
 // generic `VerifyingKey` struct/trait for zk-wasmvm:
