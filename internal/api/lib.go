@@ -86,13 +86,13 @@ func ReleaseCache(cache Cache) {
 	cache.lockfile.Close() // Also releases the file lock
 }
 
-func StoreCodeWithCircuit(cache Cache, wasm, vk []byte, unchecked bool) ([]byte, error) {
+func StoreCodeWithCircuit(cache Cache, wasm, vk []byte, persist, unchecked bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	v := makeView(vk)
 	defer runtime.KeepAlive(vk)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.store_code_with_circuit(cache.ptr, w, cbool(unchecked), v, &errmsg)
+	checksum, err := C.store_code_with_circuit(cache.ptr, w, v, cbool(persist), cbool(unchecked), &errmsg)
 	fmt.Printf("StoreCodeWithCircuit - checksum: %v\n", checksum)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)

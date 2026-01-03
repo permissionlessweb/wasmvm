@@ -3,8 +3,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::zk::check_vk;
-use cosmwasm_vm::{Cache, CircuitType, CodeBundle, HALO2_METADATA_LENGTH};
+use cosmwasm_vm::{check_circuit, Cache, CodeBundle, HALO2_METADATA_LENGTH};
 
 use serde::Serialize;
 
@@ -55,13 +54,14 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
 pub extern "C" fn store_code_with_circuit(
     cache: *mut cache_t,
     wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
+    vk: ByteSliceView,   // VK bytes (optional, can be null/empty)
+    persist: bool,
     unchecked: bool,
-    vk: ByteSliceView, // VK bytes (optional, can be null/empty)
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_store_code_with_circuit(c, wasm, vk, unchecked)
+            do_store_code_with_circuit(c, wasm, vk, persist, unchecked)
         }))
         .unwrap_or_else(|err| {
             handle_vm_panic("do_store_code_with_circuit", err);
@@ -96,6 +96,7 @@ fn do_store_code_with_circuit(
     wasm: ByteSliceView,
     vk: ByteSliceView,
     unchecked: bool,
+    persist: bool,
 ) -> Result<[Checksum; 2], Error> {
     let w_bytes = wasm.read().unwrap_or_default();
     let vk_bytes = vk.read().unwrap_or_default();
@@ -104,11 +105,17 @@ fn do_store_code_with_circuit(
     Ok(
         match (vk_bytes.len() < HALO2_METADATA_LENGTH, w_bytes.len() == 0) {
             (false, false) => {
-                let (zk, hash) = check_vk(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
+                let (footer, hash) =
+                    check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
                 cache.store_code_with_circuit(
-                    &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), &zk, hash),
+                    &CodeBundle::with_vk_and_type(
+                        w_bytes.into(),
+                        vk_bytes.into(),
+                        footer,
+                        hash.into(),
+                    ),
                     !unchecked,
-                    true,
+                    persist,
                 )?
             }
             _ => return Err(Error::panic()),
@@ -291,10 +298,18 @@ fn do_load_circuit(
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
 
-    Ok(match cache.load_vk(&checksum)? {
-        Some(vk) => vk.into(),
-        None => Default::default(),
-    })
+    // Attempt to load the circuit from cache
+    let vk_data = cache
+        .load_vk(&checksum)
+        .map_err(|e| Error::vm_err(format!("Failed to load circuit from cache: {}", e)))?;
+
+    // Return circuit bytes if they exist, error otherwise
+    match vk_data {
+        Some(data) => Ok(cosmwasm_vm::zk::serialize_circuit_data(&data)),
+        None => Err(Error::vm_err(
+            "Circuit not found in cache for given checksum",
+        )),
+    }
 }
 
 #[unsafe(no_mangle)]

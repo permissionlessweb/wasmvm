@@ -81,7 +81,7 @@ func (vm *VM) StoreCodeWithCircuit(wasm WasmCode, vk CircuitBinary, gasLimit uin
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	checksums, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true)
+	checksums, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true, true)
 	if err != nil {
 		return nil, gasCost, err
 	}
@@ -126,7 +126,7 @@ func (vm *VM) SimulateStoreCodeWithCircuit(code WasmCode, zk CircuitBinary, gasL
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	combined, err := api.StoreCodeWithCircuit(vm.cache, code, zk, false)
+	combined, err := api.StoreCodeWithCircuit(vm.cache, code, zk, false, false)
 	if err != nil {
 		return nil, gasCost, err
 	}

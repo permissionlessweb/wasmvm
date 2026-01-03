@@ -416,8 +416,9 @@ struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *
 
 struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
                                                struct ByteSliceView wasm,
-                                               bool unchecked,
                                                struct ByteSliceView vk,
+                                               bool persist,
+                                               bool unchecked,
                                                struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector store_circuit(struct cache_t *cache,

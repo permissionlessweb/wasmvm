@@ -163,7 +163,6 @@ func TestSimulateStoreCodeWithCircuit(t *testing.T) {
 		"valid hackatom contract": {
 			wasm: hackatom,
 			vk:   noRickVk,
-			err:  "",
 		},
 		"no wasm": {
 			wasm: []byte("foobar"),
@@ -179,16 +178,19 @@ func TestSimulateStoreCodeWithCircuit(t *testing.T) {
 
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			checksum, _, err := vm.SimulateStoreCodeWithCircuit(spec.wasm, spec.vk, testingGasLimit)
+			checksums, _, err := vm.SimulateStoreCodeWithCircuit(spec.wasm, spec.vk, testingGasLimit)
 
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)
 			} else {
 				require.NoError(t, err)
-				_, err = vm.GetCode(checksum[0])
+				res, err := vm.GetCode(checksums[0])
+				fmt.Printf("res: %v\n", res)
+				fmt.Printf("err: %v\n", err)
 				require.ErrorContains(t, err, "Error opening Wasm file for reading")
-				_, err = vm.GetCode(checksum[1])
-				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+				res2, err := vm.GetCircuit(checksums[1])
+				fmt.Printf("res2: %v\n", res2)
+				require.ErrorContains(t, err, "Error calling the VM: Circuit not found in cache for given checksum")
 			}
 		})
 	}
