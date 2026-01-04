@@ -55,8 +55,8 @@ pub extern "C" fn store_code_with_circuit(
     cache: *mut cache_t,
     wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
     vk: ByteSliceView,   // VK bytes (optional, can be null/empty)
-    persist: bool,
     unchecked: bool,
+    persist: bool,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -95,8 +95,8 @@ fn do_store_code_with_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
     vk: ByteSliceView,
-    unchecked: bool,
     persist: bool,
+    unchecked: bool,
 ) -> Result<[Checksum; 2], Error> {
     let w_bytes = wasm.read().unwrap_or_default();
     let vk_bytes = vk.read().unwrap_or_default();

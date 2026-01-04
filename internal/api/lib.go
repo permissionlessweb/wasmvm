@@ -155,6 +155,17 @@ func RemoveCode(cache Cache, checksum []byte) error {
 	return nil
 }
 
+func RemoveCircuit(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.remove_circuit(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)

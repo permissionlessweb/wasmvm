@@ -243,6 +243,25 @@ func TestStoreCodeAndGet(t *testing.T) {
 	require.Equal(t, WasmCode(wasm), code)
 }
 
+func TestStoreCodeAndCircuitAndGet(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	vk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	checksum, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+	require.NoError(t, err)
+
+	code, err := vm.GetCode(checksum[0])
+	require.NoError(t, err)
+	circuit, err := vm.GetCircuit(checksum[1])
+	require.NoError(t, err)
+	require.Equal(t, WasmCode(wasm), code)
+	require.Equal(t, CircuitBinary(vk), circuit)
+}
+
 func TestRemoveCode(t *testing.T) {
 	vm := withVM(t)
 
@@ -257,6 +276,30 @@ func TestRemoveCode(t *testing.T) {
 
 	err = vm.RemoveCode(checksum)
 	require.ErrorContains(t, err, "Wasm file does not exist")
+}
+
+func TestRemoveCircuit(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	vk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	checksum, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum[0])
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum[0])
+	require.ErrorContains(t, err, "Wasm file does not exist")
+
+	err = vm.RemoveCircuit(checksum[1])
+	require.NoError(t, err)
+
+	err = vm.RemoveCircuit(checksum[1])
+	require.ErrorContains(t, err, "Circuit binary does not exist")
 }
 
 func TestHappyPath(t *testing.T) {

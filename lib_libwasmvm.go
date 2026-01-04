@@ -142,6 +142,23 @@ func (vm *VM) SimulateStoreCodeWithCircuit(code WasmCode, zk CircuitBinary, gasL
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
+func (vm *VM) SimulateStoreCircuit(zk CircuitBinary, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCost(zk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	checksum, err := api.StoreCircuit(vm.cache, zk, false)
+	if err != nil {
+		return nil, gasCost, err
+	}
+
+	return checksum, gasCost, nil
+}
+
+// SimulateStoreCode is the same as StoreCode but does not actually store the code.
+// This is useful for simulating all the validations happening in StoreCode without actually
+// writing anything to disk.
 func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {
@@ -166,6 +183,10 @@ func (vm *VM) StoreCircuitUnchecked(code CircuitBinary) (Checksum, error) {
 
 func (vm *VM) RemoveCode(checksum Checksum) error {
 	return api.RemoveCode(vm.cache, checksum)
+}
+
+func (vm *VM) RemoveCircuit(checksum Checksum) error {
+	return api.RemoveCircuit(vm.cache, checksum)
 }
 
 // GetCode will load the original Wasm code for the given checksum.
