@@ -208,6 +208,7 @@ fn do_remove_circuit(
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
+    // removes circuit from disk and cache
     cache.remove_wasm(&checksum, false)?;
     Ok(())
 }
@@ -300,7 +301,7 @@ fn do_load_circuit(
 
     // Attempt to load the circuit from cache
     let vk_data = cache
-        .load_vk(&checksum)
+        .load_circuit(&checksum)
         .map_err(|e| Error::vm_err(format!("Failed to load circuit from cache: {}", e)))?;
 
     // Return circuit bytes if they exist, error otherwise

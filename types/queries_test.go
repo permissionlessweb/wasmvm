@@ -204,6 +204,53 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }
 
+func TestCircuitInfoResponseSerialization(t *testing.T) {
+	// Deserializaton
+	document := []byte(`{"zk_id":67,"creator":"jane","checksum":"f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"}`)
+	var res CircuitInfoResponse
+	err := json.Unmarshal(document, &res)
+	require.NoError(t, err)
+	require.Equal(t, CircuitInfoResponse{
+		ZkID:     uint64(67),
+		Creator:  "jane",
+		Checksum: ForceNewChecksum("f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"),
+	}, res)
+
+	// Serialization
+	myRes := CircuitInfoResponse{
+		ZkID:     uint64(0),
+		Creator:  "sam",
+		Checksum: ForceNewChecksum("ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"),
+	}
+	serialized, err := json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"zk_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
+}
+
+// func TestCircuitResponseSerialization(t *testing.T) {
+// 	bytes, err := ForceNewChecksum("f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00").MarshalJSON()
+// 	require.NoError(t, err)
+
+// 	// Deserializaton
+// 	document := []byte(`{"data":67,"creator":"jane","checksum":"f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"}`)
+// 	var res CircuitResponse
+// 	err = json.Unmarshal(document, &res)
+// 	require.NoError(t, err)
+// 	require.Equal(t, CircuitResponse{
+// 		Data: bytes,
+// 	}, res)
+
+// 	// Serialization
+// 	myRes := CircuitInfoResponse{
+// 		ZkID:     uint64(0),
+// 		Creator:  "sam",
+// 		Checksum: ForceNewChecksum("ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"),
+// 	}
+// 	serialized, err := json.Marshal(&myRes)
+// 	require.NoError(t, err)
+// 	require.JSONEq(t, `{"zk_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
+// }
+
 func TestRawRangeQuerySerialization(t *testing.T) {
 	// Serialization
 	query := RawRangeQuery{
