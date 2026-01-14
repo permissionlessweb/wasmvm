@@ -26,15 +26,16 @@ default = []
 backtraces = []
 
 [dependencies]
-#cosmwasm-std = { path = "../../../zk-cosmwasm/mvp/packages/std",features = [
+#cosmwasm-std = { path = "../../../zk-cosmwasm/packages/std",features = [
 cosmwasm-std = { git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-zk-cosmwasm = {  path = "../../../zk-cosmwasm/mvp/packages/zk",package = "zk-cosmwasm" }
-#cosmwasm-vm = {  path = "../../../zk-cosmwasm/mvp/packages/vm",package = "cosmwasm-vm", features = [
+# zk-cosmwasm = {  path = "../../../zk-cosmwasm/packages/zk",package = "zk-cosmwasm" }
+zk-cosmwasm = {  git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", package = "zk-cosmwasm" }
+#cosmwasm-vm = {  path = "../../../zk-cosmwasm/packages/vm",package = "cosmwasm-vm", features = [
 cosmwasm-vm = { git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", package = "cosmwasm-vm", features = [
   "staking",
   "stargate",
