@@ -13,50 +13,38 @@ exclude = [".gitignore"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["zk"]
+zk = ["cosmwasm-std/zk", "cosmwasm-vm/zk"]
+# This feature requires Rust nightly because it depends on the unstable backtrace feature.
+backtraces = []
+
+[dependencies]
+cosmwasm-std = { path = "../../cosmwasm/packages/std", features = ["ibc2", "iterator", "staking", "stargate"] }
+cosmwasm-vm = { package = "cosmwasm-vm", path = "../../cosmwasm/packages/vm", features = ["ibc2", "iterator", "staking", "stargate"] }
+errno = "0.3.8"
+hex = "0.4.3"
+rmp-serde = "1.3.0"
+serde = { version = "1.0.103", features = ["derive"] }
+serde_json = "1.0.91"
+thiserror = "1.0.38"
+time = { version = "0.3.36", features = ["formatting"] }
+winnow = "0.7.14"
+zk-cosmwasm = { package = "zk-cosmwasm", path = "../../cosmwasm/packages/zk" }
+
+[build-dependencies]
+cbindgen = "0.29.0"
+
+[dev-dependencies]
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+tempfile = "3.4.0"
+
 # the example is to allow us to compile a muslc static lib with the same codebase as we compile the
 # normal dynamic libs (best workaround I could find to override crate-type on the command line)
 [[example]]
 name = "wasmvmstatic"
 path = "src/examples/wasmvmstatic.rs"
 crate-type = ["staticlib"]
-
-[features]
-default = []
-# This feature requires Rust nightly because it depends on the unstable backtrace feature.
-backtraces = []
-
-[dependencies]
-#cosmwasm-std = { path = "../../../zk-cosmwasm/packages/std",features = [
-cosmwasm-std = { git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", features = [
-  "staking",
-  "stargate",
-  "iterator",
-  "ibc2",
-] }
-# zk-cosmwasm = {  path = "../../../zk-cosmwasm/packages/zk",package = "zk-cosmwasm" }
-zk-cosmwasm = {  git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", package = "zk-cosmwasm" }
-#cosmwasm-vm = {  path = "../../../zk-cosmwasm/packages/vm",package = "cosmwasm-vm", features = [
-cosmwasm-vm = { git = "https://github.com/permissionlessweb/cosmwasm", branch = "mvp", package = "cosmwasm-vm", features = [
-  "staking",
-  "stargate",
-  "iterator",
-  "ibc2",
-] }
-errno = "0.3.8"
-rmp-serde = "1.3.0"
-serde = { version = "1.0.103", features = ["derive"] }
-serde_json = "1.0.91"
-thiserror = "1.0.38"
-hex = "0.4.3"
-winnow = "0.7.14"
-time = { version = "0.3.36", features = ["formatting"] }
-
-[dev-dependencies]
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-tempfile = "3.4.0"
-
-[build-dependencies]
-cbindgen = "0.29.0"
 
 [profile.release]
 opt-level = 3

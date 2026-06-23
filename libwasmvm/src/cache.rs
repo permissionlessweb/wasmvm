@@ -3,7 +3,10 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::{check_circuit, Cache, CodeBundle, HALO2_METADATA_LENGTH};
+use cosmwasm_vm::{Cache, HALO2_METADATA_LENGTH};
+
+#[cfg(feature = "zk")]
+use cosmwasm_vm::{check_circuit, CodeBundle};
 
 use serde::Serialize;
 
@@ -50,6 +53,7 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
     Ok(Box::into_raw(out))
 }
 
+#[cfg(feature = "zk")]
 #[unsafe(no_mangle)]
 pub extern "C" fn store_code_with_circuit(
     cache: *mut cache_t,
@@ -91,6 +95,7 @@ pub extern "C" fn store_code_with_circuit(
     }
 }
 
+#[cfg(feature = "zk")]
 fn do_store_code_with_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
@@ -123,6 +128,7 @@ fn do_store_code_with_circuit(
     )
 }
 
+#[cfg(feature = "zk")]
 #[unsafe(no_mangle)]
 pub extern "C" fn store_circuit(
     cache: *mut cache_t,
@@ -142,6 +148,7 @@ pub extern "C" fn store_circuit(
     UnmanagedVector::new(Some(checksum))
 }
 
+#[cfg(feature = "zk")]
 fn do_store_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     zk: ByteSliceView,
@@ -183,6 +190,7 @@ fn do_store_code(
     Ok(cache.store_code(wasm, checked, persist)?)
 }
 
+#[cfg(feature = "zk")]
 #[unsafe(no_mangle)]
 pub extern "C" fn remove_circuit(
     cache: *mut cache_t,
@@ -200,6 +208,7 @@ pub extern "C" fn remove_circuit(
     handle_c_error_default(r, error_msg)
 }
 
+#[cfg(feature = "zk")]
 fn do_remove_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
@@ -272,6 +281,7 @@ fn do_load_wasm(
     Ok(wasm)
 }
 
+#[cfg(feature = "zk")]
 #[unsafe(no_mangle)]
 pub extern "C" fn load_circuit(
     cache: *mut cache_t,
@@ -290,6 +300,7 @@ pub extern "C" fn load_circuit(
     UnmanagedVector::new(Some(data))
 }
 
+#[cfg(feature = "zk")]
 fn do_load_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
@@ -343,6 +354,7 @@ fn do_pin(
     Ok(())
 }
 
+#[cfg(feature = "zk")]
 #[unsafe(no_mangle)]
 pub extern "C" fn pin_circuit(
     cache: *mut cache_t,
@@ -360,6 +372,7 @@ pub extern "C" fn pin_circuit(
     handle_c_error_default(r, error_msg)
 }
 
+#[cfg(feature = "zk")]
 fn do_pin_circuit(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,

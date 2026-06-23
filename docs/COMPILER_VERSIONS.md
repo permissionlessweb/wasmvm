@@ -63,6 +63,6 @@ We currently use the following version:
 
 | Type                     | Rust version | Note                              |
 | ------------------------ | ------------ | --------------------------------- |
-| Production Rust compiler | 1.82.0       | Builders version 0103             |
-| Min Rust compiler        | 1.82.0       | Supports builder versions >= 0103 |
-| Tooling Rust compiler    | 1.82.0       |                                   |
+| Production Rust compiler | 1.86.0       | Builders version 0103             |
+| Min Rust compiler        | 1.86.0       | Supports builder versions >= 0103 |
+| Tooling Rust compiler    | 1.86.0       |                                   |
