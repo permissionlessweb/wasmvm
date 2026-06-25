@@ -3,10 +3,10 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::{Cache, HALO2_METADATA_LENGTH};
+use cosmwasm_vm::Cache;
 
 #[cfg(feature = "zk")]
-use cosmwasm_vm::{check_circuit, CodeBundle};
+use cosmwasm_vm::{check_circuit, CodeBundle, COSMWASM_FOOTER_LENGTH};
 
 use serde::Serialize;
 
@@ -108,17 +108,11 @@ fn do_store_code_with_circuit(
 
     // must provide both wasm & vk
     Ok(
-        match (vk_bytes.len() < HALO2_METADATA_LENGTH, w_bytes.len() == 0) {
+        match (vk_bytes.len() < COSMWASM_FOOTER_LENGTH, w_bytes.len() == 0) {
             (false, false) => {
-                let (footer, hash) =
-                    check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
+                let footer = check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
                 cache.store_code_with_circuit(
-                    &CodeBundle::with_vk_and_type(
-                        w_bytes.into(),
-                        vk_bytes.into(),
-                        footer,
-                        hash.into(),
-                    ),
+                    &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), footer),
                     !unchecked,
                     persist,
                 )?
