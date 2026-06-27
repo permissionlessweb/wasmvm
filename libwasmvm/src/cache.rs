@@ -148,8 +148,8 @@ fn do_store_circuit(
     zk: ByteSliceView,
     persist: bool,
 ) -> Result<Checksum, Error> {
-    let wasm = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    Ok(cache.store_circuit(wasm, persist)?)
+    let vk = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    Ok(cache.store_circuit(vk, persist)?)
 }
 
 #[unsafe(no_mangle)]
@@ -344,7 +344,7 @@ fn do_pin(
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    cache.pin(&checksum, false)?;
+    cache.pin(&checksum)?;
     Ok(())
 }
 
@@ -375,7 +375,7 @@ fn do_pin_circuit(
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    cache.pin(&checksum, true)?;
+    cache.pin_circuit(&checksum)?;
     Ok(())
 }
 
@@ -698,6 +698,7 @@ mod tests {
     use std::{cmp::Ordering, collections::HashSet, iter::FromIterator, path::PathBuf};
     use tempfile::TempDir;
 
+    static NORICK_CIRCUIT: &[u8] = include_bytes!("../../testdata/norick_vk.bin");
     static HACKATOM: &[u8] = include_bytes!("../../testdata/hackatom.wasm");
     static IBC_REFLECT: &[u8] = include_bytes!("../../testdata/ibc_reflect.wasm");
 
@@ -916,6 +917,59 @@ mod tests {
         // pinning again has no effect
         let mut error_msg = UnmanagedVector::default();
         pin(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn pin_circuit_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let capabilities = "staking".to_string();
+
+        println!("starting pin circuits");
+        let mut error_msg = UnmanagedVector::default();
+        let config = Config::new(CacheOptions::new(
+            dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = serde_json::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+        let mut error_msg = UnmanagedVector::default();
+        println!("storing circit");
+        let checksum = store_circuit(
+            cache_ptr,
+            ByteSliceView::new(NORICK_CIRCUIT),
+            true,
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+        let checksum = checksum.consume().unwrap_or_default();
+        println!("first test case pass clean store_circuit");
+
+        println!("running pin_circuit");
+        let mut error_msg = UnmanagedVector::default();
+        pin_circuit(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+
+        // pinning again has no effect
+        let mut error_msg = UnmanagedVector::default();
+        pin_circuit(
             cache_ptr,
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),

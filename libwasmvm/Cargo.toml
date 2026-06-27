@@ -20,8 +20,8 @@ zk = ["cosmwasm-std/zk", "cosmwasm-vm/zk"]
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { path = "../../cosmwasm/packages/std", features = ["ibc2", "iterator", "staking", "stargate"] }
-cosmwasm-vm = { package = "cosmwasm-vm", path = "../../cosmwasm/packages/vm", features = ["ibc2", "iterator", "staking", "stargate"] }
+cosmwasm-std = { path = "../../cosmwasm/packages/std", features = ["ibc2", "iterator", "staking", "stargate", "zk"] }
+cosmwasm-vm = { package = "cosmwasm-vm", path = "../../cosmwasm/packages/vm", features = ["ibc2", "iterator", "staking", "stargate", "zk"] }
 errno = "0.3.8"
 hex = "0.4.3"
 rmp-serde = "1.3.0"
