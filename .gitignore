@@ -1,5 +1,5 @@
 # Please also see libwasmvm/.gitignore for the Rust-specific ignored files.
-
+artifacts/*
 **/*.rs.bk
 *.iml
 .idea
@@ -19,3 +19,5 @@ a.out
 
 # direnv Nix stuff
 .direnv/
+
+!artifacts/checksums.txt

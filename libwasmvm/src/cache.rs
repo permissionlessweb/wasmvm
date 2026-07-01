@@ -5,9 +5,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use cosmwasm_std::Checksum;
 use cosmwasm_vm::Cache;
 
-#[cfg(feature = "zk")]
-use cosmwasm_vm::{check_circuit, CodeBundle, COSMWASM_FOOTER_LENGTH};
-
 use serde::Serialize;
 
 use crate::api::GoApi;
@@ -19,6 +16,238 @@ use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
+
+pub use zk::*;
+
+pub mod zk {
+    use super::*;
+    use cosmwasm_vm::{check_circuit, CodeBundle, COSMWASM_FOOTER_LENGTH};
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn store_code_with_circuit(
+        cache: *mut cache_t,
+        wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
+        vk: ByteSliceView,   // VK bytes (optional, can be null/empty)
+        unchecked: bool,
+        persist: bool,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) -> UnmanagedVector {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || {
+                do_store_code_with_circuit(c, wasm, vk, persist, unchecked)
+            }))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_store_code_with_circuit", err);
+                Err(Error::panic())
+            }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+
+        // Handle result, combining two checksums into a single byte array
+        match r {
+            Ok([c1, c2]) => {
+                clear_error();
+                // Always combine two 32-byte checksums into 64 bytes
+                let mut cc = Vec::with_capacity(64);
+                cc.extend_from_slice(c1.as_slice());
+                cc.extend_from_slice(c2.as_slice());
+                UnmanagedVector::new(Some(cc))
+            }
+            Err(e) => {
+                if let Some(err) = error_msg {
+                    // Convert error to string and assign to err
+                    let error_string = format!("{}", e);
+                    *err = UnmanagedVector::new(Some(error_string.into_bytes()));
+                }
+                UnmanagedVector::new(None)
+            }
+        }
+    }
+
+    fn do_store_code_with_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        wasm: ByteSliceView,
+        vk: ByteSliceView,
+        persist: bool,
+        unchecked: bool,
+    ) -> Result<[Checksum; 2], Error> {
+        let w_bytes = wasm.read().unwrap_or_default();
+        let vk_bytes = vk.read().unwrap_or_default();
+
+        // must provide both wasm & vk
+        Ok(
+            match (vk_bytes.len() < COSMWASM_FOOTER_LENGTH, w_bytes.len() == 0) {
+                (false, false) => {
+                    let footer =
+                        check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
+                    cache.store_code_with_circuit(
+                        &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), footer),
+                        !unchecked,
+                        persist,
+                    )?
+                }
+                _ => return Err(Error::panic()),
+            },
+        )
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn store_circuit(
+        cache: *mut cache_t,
+        wasm: ByteSliceView,
+        persist: bool,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) -> UnmanagedVector {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_store_circuit(c, wasm, persist)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_store_circuit", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        let checksum = handle_c_error_binary(r, error_msg);
+        UnmanagedVector::new(Some(checksum))
+    }
+
+    fn do_store_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        zk: ByteSliceView,
+        persist: bool,
+    ) -> Result<Checksum, Error> {
+        let vk = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+        Ok(cache.store_circuit(vk, persist)?)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn remove_circuit(
+        cache: *mut cache_t,
+        checksum: ByteSliceView,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_circuit(c, checksum)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_remove_circuit", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        handle_c_error_default(r, error_msg)
+    }
+
+    fn do_remove_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        checksum: ByteSliceView,
+    ) -> Result<(), Error> {
+        let checksum: Checksum = checksum
+            .read()
+            .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+            .try_into()?;
+        // removes circuit from disk and cache
+        cache.remove_wasm(&checksum, false)?;
+        Ok(())
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn load_circuit(
+        cache: *mut cache_t,
+        checksum: ByteSliceView,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) -> UnmanagedVector {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_circuit(c, checksum)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_load_circuit", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        let data = handle_c_error_binary(r, error_msg);
+        UnmanagedVector::new(Some(data))
+    }
+
+    fn do_load_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        checksum: ByteSliceView,
+    ) -> Result<Vec<u8>, Error> {
+        let checksum: Checksum = checksum
+            .read()
+            .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+            .try_into()?;
+
+        // Attempt to load the circuit from cache
+        let vk_data = cache
+            .load_circuit(&checksum)
+            .map_err(|e| Error::vm_err(format!("Failed to load circuit from cache: {}", e)))?;
+
+        // Return circuit bytes if they exist, error otherwise
+        match vk_data {
+            Some(data) => Ok(data.vk.to_bytes().map_err(|e| Error::vm_err(e))?),
+            None => Err(Error::vm_err(
+                "Circuit not found in cache for given checksum",
+            )),
+        }
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn pin_circuit(
+        cache: *mut cache_t,
+        checksum: ByteSliceView,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin_circuit(c, checksum)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_pin_circuit", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        handle_c_error_default(r, error_msg)
+    }
+
+    fn do_pin_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        checksum: ByteSliceView,
+    ) -> Result<(), Error> {
+        let checksum: Checksum = checksum
+            .read()
+            .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+            .try_into()?;
+        cache.pin_circuit(&checksum)?;
+        Ok(())
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn unpin_circuit(
+        cache: *mut cache_t,
+        checksum: ByteSliceView,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin_circuit(c, checksum)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_unpin", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        handle_c_error_default(r, error_msg)
+    }
+
+    fn do_unpin_circuit(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        checksum: ByteSliceView,
+    ) -> Result<(), Error> {
+        let checksum: Checksum = checksum
+            .read()
+            .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+            .try_into()?;
+        cache.unpin(&checksum, true)?;
+        Ok(())
+    }
+}
 
 #[repr(C)]
 pub struct cache_t {}
@@ -53,105 +282,6 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
     Ok(Box::into_raw(out))
 }
 
-#[cfg(feature = "zk")]
-#[unsafe(no_mangle)]
-pub extern "C" fn store_code_with_circuit(
-    cache: *mut cache_t,
-    wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
-    vk: ByteSliceView,   // VK bytes (optional, can be null/empty)
-    unchecked: bool,
-    persist: bool,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_store_code_with_circuit(c, wasm, vk, persist, unchecked)
-        }))
-        .unwrap_or_else(|err| {
-            handle_vm_panic("do_store_code_with_circuit", err);
-            Err(Error::panic())
-        }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-
-    // Handle result, combining two checksums into a single byte array
-    match r {
-        Ok([c1, c2]) => {
-            clear_error();
-            // Always combine two 32-byte checksums into 64 bytes
-            let mut cc = Vec::with_capacity(64);
-            cc.extend_from_slice(c1.as_slice());
-            cc.extend_from_slice(c2.as_slice());
-            UnmanagedVector::new(Some(cc))
-        }
-        Err(e) => {
-            if let Some(err) = error_msg {
-                // Convert error to string and assign to err
-                let error_string = format!("{}", e);
-                *err = UnmanagedVector::new(Some(error_string.into_bytes()));
-            }
-            UnmanagedVector::new(None)
-        }
-    }
-}
-
-#[cfg(feature = "zk")]
-fn do_store_code_with_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    wasm: ByteSliceView,
-    vk: ByteSliceView,
-    persist: bool,
-    unchecked: bool,
-) -> Result<[Checksum; 2], Error> {
-    let w_bytes = wasm.read().unwrap_or_default();
-    let vk_bytes = vk.read().unwrap_or_default();
-
-    // must provide both wasm & vk
-    Ok(
-        match (vk_bytes.len() < COSMWASM_FOOTER_LENGTH, w_bytes.len() == 0) {
-            (false, false) => {
-                let footer = check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
-                cache.store_code_with_circuit(
-                    &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), footer),
-                    !unchecked,
-                    persist,
-                )?
-            }
-            _ => return Err(Error::panic()),
-        },
-    )
-}
-
-#[cfg(feature = "zk")]
-#[unsafe(no_mangle)]
-pub extern "C" fn store_circuit(
-    cache: *mut cache_t,
-    wasm: ByteSliceView,
-    persist: bool,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_store_circuit(c, wasm, persist)))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_store_circuit", err);
-                Err(Error::panic())
-            }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-    let checksum = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(checksum))
-}
-
-#[cfg(feature = "zk")]
-fn do_store_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    zk: ByteSliceView,
-    persist: bool,
-) -> Result<Checksum, Error> {
-    let vk = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    Ok(cache.store_circuit(vk, persist)?)
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn store_code(
     cache: *mut cache_t,
@@ -182,38 +312,6 @@ fn do_store_code(
 ) -> Result<Checksum, Error> {
     let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
     Ok(cache.store_code(wasm, checked, persist)?)
-}
-
-#[cfg(feature = "zk")]
-#[unsafe(no_mangle)]
-pub extern "C" fn remove_circuit(
-    cache: *mut cache_t,
-    checksum: ByteSliceView,
-    error_msg: Option<&mut UnmanagedVector>,
-) {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_circuit(c, checksum)))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_remove_circuit", err);
-                Err(Error::panic())
-            }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-    handle_c_error_default(r, error_msg)
-}
-
-#[cfg(feature = "zk")]
-fn do_remove_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: ByteSliceView,
-) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
-    // removes circuit from disk and cache
-    cache.remove_wasm(&checksum, false)?;
-    Ok(())
 }
 
 #[unsafe(no_mangle)]
@@ -275,49 +373,6 @@ fn do_load_wasm(
     Ok(wasm)
 }
 
-#[cfg(feature = "zk")]
-#[unsafe(no_mangle)]
-pub extern "C" fn load_circuit(
-    cache: *mut cache_t,
-    checksum: ByteSliceView,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_circuit(c, checksum)))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_load_circuit", err);
-                Err(Error::panic())
-            }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(data))
-}
-
-#[cfg(feature = "zk")]
-fn do_load_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: ByteSliceView,
-) -> Result<Vec<u8>, Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
-
-    // Attempt to load the circuit from cache
-    let vk_data = cache
-        .load_circuit(&checksum)
-        .map_err(|e| Error::vm_err(format!("Failed to load circuit from cache: {}", e)))?;
-
-    // Return circuit bytes if they exist, error otherwise
-    match vk_data {
-        Some(data) => Ok(cosmwasm_vm::zk::serialize_circuit_data(&data)),
-        None => Err(Error::vm_err(
-            "Circuit not found in cache for given checksum",
-        )),
-    }
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn pin(
     cache: *mut cache_t,
@@ -348,37 +403,6 @@ fn do_pin(
     Ok(())
 }
 
-#[cfg(feature = "zk")]
-#[unsafe(no_mangle)]
-pub extern "C" fn pin_circuit(
-    cache: *mut cache_t,
-    checksum: ByteSliceView,
-    error_msg: Option<&mut UnmanagedVector>,
-) {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin_circuit(c, checksum)))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_pin_circuit", err);
-                Err(Error::panic())
-            }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-    handle_c_error_default(r, error_msg)
-}
-
-#[cfg(feature = "zk")]
-fn do_pin_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: ByteSliceView,
-) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
-    cache.pin_circuit(&checksum)?;
-    Ok(())
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn unpin(
     cache: *mut cache_t,
@@ -406,35 +430,6 @@ fn do_unpin(
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.unpin(&checksum, false)?;
-    Ok(())
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn unpin_circuit(
-    cache: *mut cache_t,
-    checksum: ByteSliceView,
-    error_msg: Option<&mut UnmanagedVector>,
-) {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin_circuit(c, checksum)))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_unpin", err);
-                Err(Error::panic())
-            }),
-        None => Err(Error::unset_arg(CACHE_ARG)),
-    };
-    handle_c_error_default(r, error_msg)
-}
-
-fn do_unpin_circuit(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: ByteSliceView,
-) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
-    cache.unpin(&checksum, true)?;
     Ok(())
 }
 

@@ -414,27 +414,11 @@ typedef struct GasReport {
 
 struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
-                                               struct ByteSliceView wasm,
-                                               struct ByteSliceView vk,
-                                               bool unchecked,
-                                               bool persist,
-                                               struct UnmanagedVector *error_msg);
-
-struct UnmanagedVector store_circuit(struct cache_t *cache,
-                                     struct ByteSliceView wasm,
-                                     bool persist,
-                                     struct UnmanagedVector *error_msg);
-
 struct UnmanagedVector store_code(struct cache_t *cache,
                                   struct ByteSliceView wasm,
                                   bool checked,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
-
-void remove_circuit(struct cache_t *cache,
-                    struct ByteSliceView checksum,
-                    struct UnmanagedVector *error_msg);
 
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,
@@ -444,21 +428,9 @@ struct UnmanagedVector load_wasm(struct cache_t *cache,
                                  struct ByteSliceView checksum,
                                  struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector load_circuit(struct cache_t *cache,
-                                    struct ByteSliceView checksum,
-                                    struct UnmanagedVector *error_msg);
-
 void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
-void pin_circuit(struct cache_t *cache,
-                 struct ByteSliceView checksum,
-                 struct UnmanagedVector *error_msg);
-
 void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
-
-void unpin_circuit(struct cache_t *cache,
-                   struct ByteSliceView checksum,
-                   struct UnmanagedVector *error_msg);
 
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
@@ -477,6 +449,34 @@ struct UnmanagedVector get_pinned_metrics(struct cache_t *cache, struct Unmanage
  * and cannot be called on any other pointer.
  */
 void release_cache(struct cache_t *cache);
+
+struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
+                                               struct ByteSliceView wasm,
+                                               struct ByteSliceView vk,
+                                               bool unchecked,
+                                               bool persist,
+                                               struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector store_circuit(struct cache_t *cache,
+                                     struct ByteSliceView wasm,
+                                     bool persist,
+                                     struct UnmanagedVector *error_msg);
+
+void remove_circuit(struct cache_t *cache,
+                    struct ByteSliceView checksum,
+                    struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector load_circuit(struct cache_t *cache,
+                                    struct ByteSliceView checksum,
+                                    struct UnmanagedVector *error_msg);
+
+void pin_circuit(struct cache_t *cache,
+                 struct ByteSliceView checksum,
+                 struct UnmanagedVector *error_msg);
+
+void unpin_circuit(struct cache_t *cache,
+                   struct ByteSliceView checksum,
+                   struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector instantiate(struct cache_t *cache,
                                    struct ByteSliceView checksum,
