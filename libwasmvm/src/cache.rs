@@ -3,93 +3,22 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::Cache;
+use cosmwasm_vm::{Cache, CacheKey};
 
 use serde::Serialize;
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
-use crate::error::{
-    clear_error, handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error,
-};
+use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
-pub use zk::*;
-
 pub mod zk {
     use super::*;
-    use cosmwasm_vm::{check_circuit, CodeBundle, COSMWASM_FOOTER_LENGTH};
 
-    #[unsafe(no_mangle)]
-    pub extern "C" fn store_code_with_circuit(
-        cache: *mut cache_t,
-        wasm: ByteSliceView, // wasm blob bytes (optional, can be null/empty)
-        vk: ByteSliceView,   // VK bytes (optional, can be null/empty)
-        unchecked: bool,
-        persist: bool,
-        error_msg: Option<&mut UnmanagedVector>,
-    ) -> UnmanagedVector {
-        let r = match to_cache(cache) {
-            Some(c) => catch_unwind(AssertUnwindSafe(move || {
-                do_store_code_with_circuit(c, wasm, vk, persist, unchecked)
-            }))
-            .unwrap_or_else(|err| {
-                handle_vm_panic("do_store_code_with_circuit", err);
-                Err(Error::panic())
-            }),
-            None => Err(Error::unset_arg(CACHE_ARG)),
-        };
-
-        // Handle result, combining two checksums into a single byte array
-        match r {
-            Ok([c1, c2]) => {
-                clear_error();
-                // Always combine two 32-byte checksums into 64 bytes
-                let mut cc = Vec::with_capacity(64);
-                cc.extend_from_slice(c1.as_slice());
-                cc.extend_from_slice(c2.as_slice());
-                UnmanagedVector::new(Some(cc))
-            }
-            Err(e) => {
-                if let Some(err) = error_msg {
-                    // Convert error to string and assign to err
-                    let error_string = format!("{}", e);
-                    *err = UnmanagedVector::new(Some(error_string.into_bytes()));
-                }
-                UnmanagedVector::new(None)
-            }
-        }
-    }
-
-    fn do_store_code_with_circuit(
-        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-        wasm: ByteSliceView,
-        vk: ByteSliceView,
-        persist: bool,
-        unchecked: bool,
-    ) -> Result<[Checksum; 2], Error> {
-        let w_bytes = wasm.read().unwrap_or_default();
-        let vk_bytes = vk.read().unwrap_or_default();
-
-        // must provide both wasm & vk
-        Ok(
-            match (vk_bytes.len() < COSMWASM_FOOTER_LENGTH, w_bytes.len() == 0) {
-                (false, false) => {
-                    let footer =
-                        check_circuit(vk_bytes).map_err(|e| Error::vm_err(e.to_string()))?;
-                    cache.store_code_with_circuit(
-                        &CodeBundle::with_vk_and_type(w_bytes.into(), vk_bytes.into(), footer),
-                        !unchecked,
-                        persist,
-                    )?
-                }
-                _ => return Err(Error::panic()),
-            },
-        )
-    }
+    // ── store_circuit ────────────────────────────────────────────────────
 
     #[unsafe(no_mangle)]
     pub extern "C" fn store_circuit(
@@ -106,18 +35,21 @@ pub mod zk {
                 }),
             None => Err(Error::unset_arg(CACHE_ARG)),
         };
-        let checksum = handle_c_error_binary(r, error_msg);
-        UnmanagedVector::new(Some(checksum))
+        let circuit_key = handle_c_error_binary(r, error_msg);
+        UnmanagedVector::new(Some(circuit_key))
     }
 
     fn do_store_circuit(
         cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
         zk: ByteSliceView,
         persist: bool,
-    ) -> Result<Checksum, Error> {
+    ) -> Result<Vec<u8>, Error> {
         let vk = zk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-        Ok(cache.store_circuit(vk, persist)?)
+        let circuit_key = cache.store_circuit(vk, persist)?;
+        Ok(circuit_key.to_vec())
     }
+
+    // ── remove_circuit ───────────────────────────────────────────────────
 
     #[unsafe(no_mangle)]
     pub extern "C" fn remove_circuit(
@@ -140,14 +72,16 @@ pub mod zk {
         cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
         checksum: ByteSliceView,
     ) -> Result<(), Error> {
-        let checksum: Checksum = checksum
+        let circuit_key: [u8; 72] = checksum
             .read()
             .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-            .try_into()?;
-        // removes circuit from disk and cache
-        cache.remove_wasm(&checksum, false)?;
+            .try_into()
+            .map_err(|_| Error::vm_err("circuit key must be 72 bytes"))?;
+        cache.remove_circuit(&circuit_key)?;
         Ok(())
     }
+
+    // ── load_circuit ─────────────────────────────────────────────────────
 
     #[unsafe(no_mangle)]
     pub extern "C" fn load_circuit(
@@ -171,24 +105,28 @@ pub mod zk {
         cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
         checksum: ByteSliceView,
     ) -> Result<Vec<u8>, Error> {
-        let checksum: Checksum = checksum
+        let circuit_key: [u8; 72] = checksum
             .read()
             .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-            .try_into()?;
+            .try_into()
+            .map_err(|_| Error::vm_err("circuit key must be 72 bytes"))?;
 
-        // Attempt to load the circuit from cache
         let vk_data = cache
-            .load_circuit(&checksum)
+            .load_circuit(&circuit_key)
             .map_err(|e| Error::vm_err(format!("Failed to load circuit from cache: {}", e)))?;
 
-        // Return circuit bytes if they exist, error otherwise
         match vk_data {
-            Some(data) => Ok(data.vk.to_bytes().map_err(|e| Error::vm_err(e))?),
+            Some(data) => Ok(data
+                .vk
+                .to_bytes_with_params()
+                .map_err(|e| Error::vm_err(e))?),
             None => Err(Error::vm_err(
                 "Circuit not found in cache for given checksum",
             )),
         }
     }
+
+    // ── pin_circuit ──────────────────────────────────────────────────────
 
     #[unsafe(no_mangle)]
     pub extern "C" fn pin_circuit(
@@ -211,13 +149,16 @@ pub mod zk {
         cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
         checksum: ByteSliceView,
     ) -> Result<(), Error> {
-        let checksum: Checksum = checksum
+        let circuit_key: [u8; 72] = checksum
             .read()
             .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-            .try_into()?;
-        cache.pin_circuit(&checksum)?;
+            .try_into()
+            .map_err(|_| Error::vm_err("circuit key must be 72 bytes"))?;
+        cache.pin_circuit(&circuit_key)?;
         Ok(())
     }
+
+    // ── unpin_circuit ────────────────────────────────────────────────────
 
     #[unsafe(no_mangle)]
     pub extern "C" fn unpin_circuit(
@@ -240,12 +181,42 @@ pub mod zk {
         cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
         checksum: ByteSliceView,
     ) -> Result<(), Error> {
-        let checksum: Checksum = checksum
+        let circuit_key: [u8; 72] = checksum
             .read()
             .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-            .try_into()?;
-        cache.unpin(&checksum, true)?;
+            .try_into()
+            .map_err(|_| Error::vm_err("circuit key must be 72 bytes"))?;
+        cache.unpin_circuit(&circuit_key)?;
         Ok(())
+    }
+
+    // ── store_param (standalone params, no circuit) ─────────────────────
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn store_param(
+        cache: *mut cache_t,
+        param: ByteSliceView,
+        error_msg: Option<&mut UnmanagedVector>,
+    ) -> UnmanagedVector {
+        let r = match to_cache(cache) {
+            Some(c) => catch_unwind(AssertUnwindSafe(move || do_store_param(c, param)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_store_param", err);
+                    Err(Error::panic())
+                }),
+            None => Err(Error::unset_arg(CACHE_ARG)),
+        };
+        let param_key = handle_c_error_binary(r, error_msg);
+        UnmanagedVector::new(Some(param_key))
+    }
+
+    fn do_store_param(
+        cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+        param: ByteSliceView,
+    ) -> Result<Vec<u8>, Error> {
+        let p = param.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+        let param_key = cache.store_param(&p)?;
+        Ok(param_key.to_vec())
     }
 }
 
@@ -339,7 +310,7 @@ fn do_remove_wasm(
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    cache.remove_wasm(&checksum, true)?;
+    cache.remove_wasm(&checksum)?;
     Ok(())
 }
 
@@ -429,7 +400,7 @@ fn do_unpin(
         .read()
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    cache.unpin(&checksum, false)?;
+    cache.unpin(&checksum)?;
     Ok(())
 }
 
@@ -630,7 +601,7 @@ impl From<cosmwasm_vm::PerModuleMetrics> for PerModuleMetrics {
 #[derive(Serialize)]
 struct PinnedMetrics {
     // TODO: Remove the array usage as soon as `Checksum` has a stable wire format in msgpack
-    per_module: Vec<([u8; 32], PerModuleMetrics)>,
+    per_module: Vec<(CacheKey, PerModuleMetrics)>,
 }
 
 impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
@@ -639,7 +610,7 @@ impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
             per_module: value
                 .per_module
                 .into_iter()
-                .map(|(checksum, metrics)| (*checksum.as_ref(), metrics.into()))
+                .map(|(key, metrics)| (key, metrics.into()))
                 .collect(),
         }
     }
@@ -686,9 +657,10 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 
 #[cfg(test)]
 mod tests {
-    use crate::assert_approx_eq;
-
+    use super::zk::*;
     use super::*;
+
+    use crate::assert_approx_eq;
     use cosmwasm_vm::{CacheOptions, Config, Size};
     use std::{cmp::Ordering, collections::HashSet, iter::FromIterator, path::PathBuf};
     use tempfile::TempDir;

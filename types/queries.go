@@ -475,9 +475,11 @@ type CircuitInfoQuery struct {
 	ZkID uint64 `json:"zk_id"`
 }
 
-// CircuitInfoResponse contains circuit metadata
+// CircuitInfoResponse contains circuit metadata.
+// CircuitKey is the wasmvm cache key (typically 72 bytes: param_key||vk_key),
+// not a 32-byte Wasm checksum.
 type CircuitInfoResponse struct {
-	ZkID     uint64   `json:"zk_id"`
-	Creator  string   `json:"creator"`
-	Checksum Checksum `json:"checksum"`
+	ZkID       uint64 `json:"zk_id"`
+	Creator    string `json:"creator"`
+	CircuitKey []byte `json:"circuit_key"`
 }

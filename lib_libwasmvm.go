@@ -181,6 +181,13 @@ func (vm *VM) StoreCircuitUnchecked(code CircuitBinary) (Checksum, error) {
 	return api.StoreCircuitUnchecked(vm.cache, code)
 }
 
+// StoreParam stores raw halo2 commitment parameters independently, without a
+// full circuit. The params are written to `zk_param/{param_key}.bin` and cached
+// in pinned memory. Returns the 36-byte param_key.
+func (vm *VM) StoreParam(param CircuitBinary) ([]byte, error) {
+	return api.StoreParam(vm.cache, param)
+}
+
 func (vm *VM) RemoveCode(checksum Checksum) error {
 	return api.RemoveCode(vm.cache, checksum)
 }

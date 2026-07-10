@@ -133,6 +133,17 @@ func StoreCircuitUnchecked(cache Cache, zk []byte) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
+func StoreParam(cache Cache, param []byte) ([]byte, error) {
+	p := makeView(param)
+	defer runtime.KeepAlive(param)
+	errmsg := uninitializedUnmanagedVector()
+	paramKey, err := C.store_param(cache.ptr, p, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(paramKey), nil
+}
+
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)

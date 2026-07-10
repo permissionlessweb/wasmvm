@@ -478,6 +478,10 @@ void unpin_circuit(struct cache_t *cache,
                    struct ByteSliceView checksum,
                    struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector store_param(struct cache_t *cache,
+                                   struct ByteSliceView param,
+                                   struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector instantiate(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct ByteSliceView env,
