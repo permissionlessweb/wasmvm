@@ -437,6 +437,51 @@ fn do_sync_pinned_codes(
     Ok(())
 }
 
+/// Synchronize pinned **circuits** (concatenated 72-byte circuit keys).
+///
+/// Circuit analogue of [`sync_pinned_codes`] for wasmd bulk pin/restart.
+#[no_mangle]
+pub extern "C" fn sync_pinned_circuits(
+    cache: *mut cache_t,
+    circuit_keys: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) {
+    let r = match to_cache(cache) {
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_sync_pinned_circuits(c, circuit_keys)))
+                .unwrap_or_else(|err| {
+                    handle_vm_panic("do_sync_pinned_circuits", err);
+                    Err(Error::panic())
+                })
+        }
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_sync_pinned_circuits(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    circuit_keys: ByteSliceView,
+) -> Result<(), Error> {
+    let raw: Vec<u8> = circuit_keys
+        .read()
+        .ok_or_else(|| Error::unset_arg(CHECKSUMS_ARG))?
+        .into();
+    if raw.len() % 72 != 0 {
+        return Err(Error::invalid_utf8("circuit keys length must be multiple of 72"));
+    }
+    let keys: Vec<[u8; 72]> = raw
+        .chunks_exact(72)
+        .map(|c| {
+            let mut a = [0u8; 72];
+            a.copy_from_slice(c);
+            a
+        })
+        .collect();
+    cache.sync_pinned_circuits(&keys)?;
+    Ok(())
+}
+
 /// The result type of the FFI function analyze_code.
 ///
 /// Please note that the unmanaged vector in `required_capabilities`

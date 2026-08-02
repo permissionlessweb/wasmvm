@@ -436,6 +436,15 @@ void sync_pinned_codes(struct cache_t *cache,
                        struct ByteSliceView checksums,
                        struct UnmanagedVector *error_msg);
 
+/**
+ * Synchronize pinned circuits with the provided list of 72-byte circuit keys
+ * (concatenated). Circuit analogue of sync_pinned_codes.
+ */
+void sync_pinned_circuits(struct cache_t *cache,
+                          struct ByteSliceView circuit_keys,
+                          struct UnmanagedVector *error_msg);
+
+
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct UnmanagedVector *error_msg);

@@ -249,6 +249,17 @@ func (vm *VM) SyncPinnedCodes(checksums []Checksum) error {
 	return api.SyncPinnedCodes(vm.cache, buffer)
 }
 
+// SyncPinnedCircuits ensures the given circuit keys (72-byte) match the pinned set.
+// Circuit analogue of SyncPinnedCodes for wasmd bulk pin / node restart.
+func (vm *VM) SyncPinnedCircuits(circuitKeys []Checksum) error {
+	// Circuit keys may be stored as Checksum-like []byte of length 72 in wasmd.
+	buffer := make([]byte, 0)
+	for _, key := range circuitKeys {
+		buffer = append(buffer, key...)
+	}
+	return api.SyncPinnedCircuits(vm.cache, buffer)
+}
+
 // AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later

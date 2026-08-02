@@ -436,6 +436,15 @@ void sync_pinned_codes(struct cache_t *cache,
                        struct ByteSliceView checksums,
                        struct UnmanagedVector *error_msg);
 
+/**
+ * Synchronize pinned **circuits** (concatenated 72-byte circuit keys).
+ *
+ * Circuit analogue of [`sync_pinned_codes`] for wasmd bulk pin/restart.
+ */
+void sync_pinned_circuits(struct cache_t *cache,
+                          struct ByteSliceView circuit_keys,
+                          struct UnmanagedVector *error_msg);
+
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct UnmanagedVector *error_msg);

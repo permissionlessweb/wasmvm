@@ -254,6 +254,18 @@ func SyncPinnedCodes(cache Cache, checksums []byte) error {
 	return nil
 }
 
+// SyncPinnedCircuits bulk-syncs pinned circuits (concatenated 72-byte circuit keys).
+func SyncPinnedCircuits(cache Cache, circuitKeys []byte) error {
+	cs := makeView(circuitKeys)
+	defer runtime.KeepAlive(circuitKeys)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.sync_pinned_circuits(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
