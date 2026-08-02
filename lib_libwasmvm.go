@@ -106,7 +106,7 @@ func (vm *VM) StoreCodeWithCircuit(wasm WasmCode, vk CircuitBinary, gasLimit uin
 // This function stores the code for that contract only once, but it can
 // be instantiated with custom inputs in the future.
 //
-// Returns both the checksum, as well as the gas cost of compilation (in CosmWasm Gas) or an error.
+// Returns both the checksum and gas cost of compilation (in CosmWasm Gas) or an error.
 func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {
@@ -234,15 +234,22 @@ func (vm *VM) Unpin(checksum Checksum) error {
 	return api.Unpin(vm.cache, checksum)
 }
 
-// Unpin removes the guarantee of a contract to be pinned (see Pin).
-// After calling this, the code may or may not remain in memory depending on
-// the implementor's choice.
-// Unpin is idempotent.
+// UnpinCircuit removes the guarantee of a circuit to be pinned (see PinCircuit).
+// UnpinCircuit is idempotent.
 func (vm *VM) UnpinCircuit(checksum Checksum) error {
 	return api.UnpinCircuit(vm.cache, checksum)
 }
 
-// Returns a report of static analysis of the wasm contract (uncompiled).
+// SyncPinnedCodes ensures the given codes are pinned (upstream CosmWasm v3.0.x).
+func (vm *VM) SyncPinnedCodes(checksums []Checksum) error {
+	buffer := make([]byte, 0)
+	for _, checksum := range checksums {
+		buffer = append(buffer, checksum...)
+	}
+	return api.SyncPinnedCodes(vm.cache, buffer)
+}
+
+// AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
 func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
@@ -412,7 +419,7 @@ func (vm *VM) Migrate(
 //
 // MigrateMsg has some data on how to perform the migration.
 //
-// MigrateWithInfo takes one more argument - `migrateInfo`. It consist of an additional data
+// MigrateWithInfo takes one more argument - `migrateInfo`. It consists of an additional data
 // related to the on-chain current contract's state version.
 func (vm *VM) MigrateWithInfo(
 	checksum Checksum,
@@ -520,7 +527,7 @@ func (vm *VM) Reply(
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake phase
 func (vm *VM) IBCChannelOpen(
 	checksum Checksum,
 	env types.Env,
@@ -554,7 +561,7 @@ func (vm *VM) IBCChannelOpen(
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake phase
 func (vm *VM) IBCChannelConnect(
 	checksum Checksum,
 	env types.Env,
@@ -655,7 +662,7 @@ func (vm *VM) IBCPacketReceive(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBCPacketAck is available on IBC-enabled contracts and is called when an
+// IBCPacketAck is available on IBC-enabled contracts and is called when
 // the response for an outgoing packet (previously sent by this contract)
 // is received
 func (vm *VM) IBCPacketAck(

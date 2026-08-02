@@ -243,6 +243,17 @@ func UnpinCircuit(cache Cache, checksum []byte) error {
 	return nil
 }
 
+func SyncPinnedCodes(cache Cache, checksums []byte) error {
+	cs := makeView(checksums)
+	defer runtime.KeepAlive(checksums)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.sync_pinned_codes(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
