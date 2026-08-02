@@ -420,6 +420,18 @@ struct UnmanagedVector store_code(struct cache_t *cache,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
 
+/**
+ * Store Wasm code and a circuit blob; returns code_checksum (32) || circuit_key (72).
+ *
+ * Argument order matches Go `StoreCodeWithCircuit` (persist, then unchecked=true ⇒ skip checks).
+ */
+struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
+                                               struct ByteSliceView wasm,
+                                               struct ByteSliceView vk,
+                                               bool persist,
+                                               bool unchecked,
+                                               struct UnmanagedVector *error_msg);
+
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,
                  struct UnmanagedVector *error_msg);
@@ -437,13 +449,13 @@ void sync_pinned_codes(struct cache_t *cache,
                        struct UnmanagedVector *error_msg);
 
 /**
- * Synchronize pinned circuits with the provided list of 72-byte circuit keys
- * (concatenated). Circuit analogue of sync_pinned_codes.
+ * Synchronize pinned **circuits** (concatenated 72-byte circuit keys).
+ *
+ * Circuit analogue of [`sync_pinned_codes`] for wasmd bulk pin/restart.
  */
 void sync_pinned_circuits(struct cache_t *cache,
                           struct ByteSliceView circuit_keys,
                           struct UnmanagedVector *error_msg);
-
 
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
@@ -462,13 +474,6 @@ struct UnmanagedVector get_pinned_metrics(struct cache_t *cache, struct Unmanage
  * and cannot be called on any other pointer.
  */
 void release_cache(struct cache_t *cache);
-
-struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
-                                               struct ByteSliceView wasm,
-                                               struct ByteSliceView vk,
-                                               bool unchecked,
-                                               bool persist,
-                                               struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector store_circuit(struct cache_t *cache,
                                      struct ByteSliceView wasm,

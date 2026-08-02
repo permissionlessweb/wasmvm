@@ -285,6 +285,50 @@ fn do_store_code(
     Ok(cache.store_code(wasm, checked, persist)?)
 }
 
+/// Store Wasm code and a circuit blob; returns code_checksum (32) || circuit_key (72).
+///
+/// Argument order matches Go `StoreCodeWithCircuit` (persist, then unchecked=true ⇒ skip checks).
+#[unsafe(no_mangle)]
+pub extern "C" fn store_code_with_circuit(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    vk: ByteSliceView,
+    persist: bool,
+    unchecked: bool,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_store_code_with_circuit(c, wasm, vk, persist, unchecked)
+        }))
+        .unwrap_or_else(|err| {
+            handle_vm_panic("do_store_code_with_circuit", err);
+            Err(Error::panic())
+        }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let out = handle_c_error_binary(r, error_msg);
+    UnmanagedVector::new(Some(out))
+}
+
+fn do_store_code_with_circuit(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    wasm: ByteSliceView,
+    vk: ByteSliceView,
+    persist: bool,
+    unchecked: bool,
+) -> Result<Vec<u8>, Error> {
+    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    let vk = vk.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+    let checked = !unchecked;
+    let code_checksum = cache.store_code(wasm, checked, persist)?;
+    let circuit_key = cache.store_circuit(vk, persist)?;
+    let mut out = Vec::with_capacity(32 + 72);
+    out.extend_from_slice(code_checksum.as_slice());
+    out.extend_from_slice(&circuit_key);
+    Ok(out)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn remove_wasm(
     cache: *mut cache_t,

@@ -420,6 +420,18 @@ struct UnmanagedVector store_code(struct cache_t *cache,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
 
+/**
+ * Store Wasm code and a circuit blob; returns code_checksum (32) || circuit_key (72).
+ *
+ * Argument order matches Go `StoreCodeWithCircuit` (persist, then unchecked=true ⇒ skip checks).
+ */
+struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
+                                               struct ByteSliceView wasm,
+                                               struct ByteSliceView vk,
+                                               bool persist,
+                                               bool unchecked,
+                                               struct UnmanagedVector *error_msg);
+
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,
                  struct UnmanagedVector *error_msg);
