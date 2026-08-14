@@ -29,7 +29,7 @@ var testingCapabilities = []string{"staking", "stargate", "iterator"}
 const (
 	cyberpunkTestContract = "./testdata/cyberpunk.wasm"
 	hackatomTestContract  = "./testdata/hackatom.wasm"
-	noRickTestCircuitVK   = "./testdata/vk_combined.bin"
+	noRickTestCircuitVK   = "./testdata/norick_vk.bin"
 )
 
 func withVM(t *testing.T) *VM {
@@ -62,8 +62,11 @@ func TestStoreCodeAndVk(t *testing.T) {
 		require.NoError(t, err)
 		vk, err := os.ReadFile(noRickTestCircuitVK)
 		require.NoError(t, err)
-		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+		ids, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
 		require.NoError(t, err)
+		require.Len(t, ids, 2)
+		require.Len(t, ids[0], types.ChecksumLen)
+		require.Len(t, ids[1], types.CircuitKeyLen)
 	}
 
 	// Valid cyberpunk contract
@@ -86,12 +89,13 @@ func TestStoreCodeAndVk(t *testing.T) {
 		_, _, err := vm.StoreCode(wasm, testingGasLimit)
 		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
-	// No Wasm, No vk
+	// Garbage wasm is rejected by check_wasm (same as StoreCode)
 	{
 		wasm := []byte("tete")
-		vk := []byte("")
-		_, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
-		require.ErrorContains(t, err, "must provide either wasm or vk bytes")
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
 	}
 
 }
@@ -167,12 +171,12 @@ func TestSimulateStoreCodeWithCircuit(t *testing.T) {
 		"no wasm": {
 			wasm: []byte("foobar"),
 			vk:   noRickVk,
-			err:  "invalid combined checksum length",
+			err:  "Error calling the VM",
 		},
 		"no vk": {
 			wasm: hackatom,
 			vk:   []byte(""),
-			err:  "invalid combined checksum length",
+			err:  "Error calling the VM",
 		},
 	}
 
@@ -184,13 +188,17 @@ func TestSimulateStoreCodeWithCircuit(t *testing.T) {
 				assert.ErrorContains(t, err, spec.err)
 			} else {
 				require.NoError(t, err)
+				require.Len(t, checksums, 2)
+				require.Len(t, checksums[0], types.ChecksumLen)
+				require.Len(t, checksums[1], types.CircuitKeyLen)
 				res, err := vm.GetCode(checksums[0])
 				fmt.Printf("res: %v\n", res)
 				fmt.Printf("err: %v\n", err)
 				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+				// persist=false still warms the in-memory circuit LRU (H-03).
 				res2, err := vm.GetCircuit(checksums[1])
-				fmt.Printf("res2: %v\n", res2)
-				require.ErrorContains(t, err, "Error calling the VM: Circuit not found in cache for given checksum")
+				require.NoError(t, err)
+				require.NotEmpty(t, res2)
 			}
 		})
 	}
@@ -253,6 +261,8 @@ func TestStoreCodeAndCircuitAndGet(t *testing.T) {
 
 	checksum, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
 	require.NoError(t, err)
+	require.Len(t, checksum[0], types.ChecksumLen)
+	require.Len(t, checksum[1], types.CircuitKeyLen)
 
 	code, err := vm.GetCode(checksum[0])
 	require.NoError(t, err)
@@ -299,7 +309,7 @@ func TestRemoveCircuit(t *testing.T) {
 	require.NoError(t, err)
 
 	err = vm.RemoveCircuit(checksum[1])
-	require.ErrorContains(t, err, "Circuit binary does not exist")
+	require.ErrorContains(t, err, "Circuit file does not exist")
 }
 
 func TestHappyPath(t *testing.T) {

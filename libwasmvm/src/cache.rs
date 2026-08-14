@@ -287,7 +287,10 @@ fn do_store_code(
 
 /// Store Wasm code and a circuit blob; returns code_checksum (32) || circuit_key (72).
 ///
-/// Argument order matches Go `StoreCodeWithCircuit` (persist, then unchecked=true ⇒ skip checks).
+/// Argument order matches Go: `(persist, unchecked)`.
+/// `unchecked=false` ⇒ `checked=true` (same `check_wasm` as `store_code`).
+/// Combined persist path used by tests/tooling; wasmd `create_with_circuit`
+/// calls `store_code` + `store_circuit` separately (both checked).
 #[unsafe(no_mangle)]
 pub extern "C" fn store_code_with_circuit(
     cache: *mut cache_t,

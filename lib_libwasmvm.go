@@ -67,34 +67,29 @@ func (vm *VM) StoreCircuit(zk CircuitBinary, gasLimit uint64) (Checksum, uint64,
 	return checksum, gasCost, err
 }
 
-// StoreCodeWithCircuit will compile the Wasm code, and store the resulting compiled module, along with a halo2 circuit verifying key deserialized and pinned to memory.
+// StoreCodeWithCircuit compiles Wasm (same static checks as StoreCode) and stores
+// the circuit blob (check_circuit). Returns [wasmChecksum 32, circuitKey 72].
+//
+// Live wasmd create_with_circuit does not call this: it uses StoreCode then
+// StoreCircuit, each already checked. This combined API is for tests / tooling
+// and must not skip check_wasm. The only wasm skip is StoreCodeUnchecked
+// (state-sync of previously validated code).
 func (vm *VM) StoreCodeWithCircuit(wasm WasmCode, vk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
-	gasCost := compileCost(wasm)
-	gasCost2 := compileCost(vk)
-	compositeGasLimit := gasCost + gasCost2
-	// fmt.Printf("gasCost: %v\n", gasCost)
-	// fmt.Printf("gasCost2: %v\n", gasCost2)
-	// fmt.Printf("gasLimit: %v\n", gasLimit)
-	fmt.Printf("compositeGasLimit: %v\n", compositeGasLimit)
-
-	if gasLimit < compositeGasLimit {
+	gasCost := compileCost(wasm) + compileCost(vk)
+	if gasLimit < gasCost {
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	checksums, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true, true)
+	// persist=true, unchecked=false → Rust checked=!unchecked → check_wasm + check_circuit
+	combined, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true, false)
 	if err != nil {
 		return nil, gasCost, err
 	}
-	fmt.Printf("len(checksums): %v\n", len(checksums))
-	if len(checksums) < 64 {
-		return nil, gasCost, types.NoVkorWasm{}
-
+	code, circuit, err := types.SplitCombinedStoreIDs(combined)
+	if err != nil {
+		return nil, gasCost, err
 	}
-	first := checksums[:types.ChecksumLen]
-	second := checksums[types.ChecksumLen:]
-	// fmt.Printf("first: %v\n", first)
-	// fmt.Printf("second: %v\n", second)
-	return []Checksum{first, second}, gasCost, err
+	return []Checksum{code, Checksum(circuit)}, gasCost, nil
 }
 
 // StoreCode will compile the Wasm code, and store the resulting compiled module
@@ -121,22 +116,21 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
 func (vm *VM) SimulateStoreCodeWithCircuit(code WasmCode, zk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
-	gasCost := compileCost(zk)
+	gasCost := compileCost(code) + compileCost(zk)
 	if gasLimit < gasCost {
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
+	// persist=false, unchecked=false — validate wasm+circuit, no disk
 	combined, err := api.StoreCodeWithCircuit(vm.cache, code, zk, false, false)
 	if err != nil {
 		return nil, gasCost, err
 	}
-	const expectedLen = 2 * types.ChecksumLen
-	if len(combined) != expectedLen {
-		return nil, gasCost, fmt.Errorf("invalid combined checksum length: expected %d, got %d", expectedLen, len(combined))
+	codeID, circuit, err := types.SplitCombinedStoreIDs(combined)
+	if err != nil {
+		return nil, gasCost, err
 	}
-	first := combined[:types.ChecksumLen]
-	second := combined[types.ChecksumLen:]
-	return []Checksum{first, second}, gasCost, nil
+	return []Checksum{codeID, Checksum(circuit)}, gasCost, nil
 }
 
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.

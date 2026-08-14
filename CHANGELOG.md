@@ -4,6 +4,11 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
+### Fixed
+
+- StoreCodeWithCircuit persist now runs check_wasm (same as StoreCode). Combined FFI IDs are wasm checksum (32) + circuit key (72).
+
+
 ## [3.0.7] - 2026-06-24
 
 ### Changed
