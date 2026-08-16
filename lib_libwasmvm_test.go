@@ -24,7 +24,7 @@ const (
 	testingCacheSize   = 100                     // MiB
 )
 
-var testingCapabilities = []string{"staking", "stargate", "iterator"}
+var testingCapabilities = []string{"staking", "stargate", "iterator", "bulk_memory"}
 
 const (
 	cyberpunkTestContract = "./testdata/cyberpunk.wasm"
