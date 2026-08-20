@@ -423,7 +423,10 @@ struct UnmanagedVector store_code(struct cache_t *cache,
 /**
  * Store Wasm code and a circuit blob; returns code_checksum (32) || circuit_key (72).
  *
- * Argument order matches Go `StoreCodeWithCircuit` (persist, then unchecked=true ⇒ skip checks).
+ * Argument order matches Go: `(persist, unchecked)`.
+ * `unchecked=false` ⇒ `checked=true` (same `check_wasm` as `store_code`).
+ * Combined persist path used by tests/tooling; wasmd `create_with_circuit`
+ * calls `store_code` + `store_circuit` separately (both checked).
  */
 struct UnmanagedVector store_code_with_circuit(struct cache_t *cache,
                                                struct ByteSliceView wasm,
