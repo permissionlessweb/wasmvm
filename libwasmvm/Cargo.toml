@@ -31,6 +31,7 @@ thiserror = "1.0.38"
 time = { version = "0.3.36", features = ["formatting"] }
 winnow = "0.7.14"
 zk-cosmwasm = { package = "zk-cosmwasm", path = "../../cosmwasm/packages/zk" }
+lean-stwo-dummy = { path = "./vendor/lean-stwo-dummy", features = ["real-stwo"] }
 
 [build-dependencies]
 cbindgen = "0.29.0"

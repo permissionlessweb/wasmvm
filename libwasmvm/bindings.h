@@ -503,6 +503,13 @@ struct UnmanagedVector store_param(struct cache_t *cache,
                                    struct ByteSliceView param,
                                    struct UnmanagedVector *error_msg);
 
+/**
+ * ProcessProposal waist: verify FOLD/SSLE without a CosmWasm contract.
+ */
+void verify_stwo_host_proof(struct ByteSliceView proof,
+                            struct ByteSliceView instances,
+                            struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector instantiate(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct ByteSliceView env,
