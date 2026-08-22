@@ -52,6 +52,7 @@ style = "both"
 include = [
     "GoError",
     "ErrnoValue",
+    "verify_stwo_host_proof",
 ]
 exclude = []
 # prefix = "CAPI_"
