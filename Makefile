@@ -125,10 +125,17 @@ release-build-macos:
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the static library for macOS (.a)
+# UNIVERSAL=1 (docker only) also builds x86_64 and lipo. Default is aarch64-only.
 release-build-macos-static:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos_static.sh
+	docker run --rm -e UNIVERSAL=$(UNIVERSAL) -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
+
+# Native Darwin arm64 static archive (no Docker). Use this on a Mac to curate
+# libwasmvmstatic_darwin.a for `go build -tags static_wasm`.
+.PHONY: release-build-macos-static-arm64
+release-build-macos-static-arm64:
+	@bash builders/host/build_macos_static_arm64.sh
 
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:

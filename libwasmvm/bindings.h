@@ -505,6 +505,7 @@ struct UnmanagedVector store_param(struct cache_t *cache,
 
 /**
  * ProcessProposal waist: verify FOLD/SSLE without a CosmWasm contract.
+ * Wired through Path A `AnyVerifyingKey::verify` (not a second proof format).
  */
 void verify_stwo_host_proof(struct ByteSliceView proof,
                             struct ByteSliceView instances,

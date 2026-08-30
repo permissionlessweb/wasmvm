@@ -20,7 +20,12 @@ cp internal/api/libwasmvm.dylib               "$ARTIFACTS_DIR/" 2>/dev/null || e
 cp internal/api/libwasmvm.x86_64.so           "$ARTIFACTS_DIR/" 2>/dev/null || echo "Warning: libwasmvm.x86_64.so not found"
 cp internal/api/libwasmvm_muslc.aarch64.a     "$ARTIFACTS_DIR/" 2>/dev/null || echo "Warning: libwasmvm_muslc.aarch64.a not found"
 cp internal/api/libwasmvm_muslc.x86_64.a      "$ARTIFACTS_DIR/" 2>/dev/null || echo "Warning: libwasmvm_muslc.x86_64.a not found"
-cp internal/api/libwasmvmstatic_darwin.a      "$ARTIFACTS_DIR/" 2>/dev/null || echo "Warning: libwasmvmstatic_darwin.a not found"
+if [ -f internal/api/libwasmvmstatic_darwin.a ]; then
+  cp internal/api/libwasmvmstatic_darwin.a "$ARTIFACTS_DIR/"
+else
+  echo "ERROR: libwasmvmstatic_darwin.a missing (run make release-build-macos-static-arm64)" >&2
+  exit 1
+fi
 
 echo "=== Generating checksums ==="
 cd "$ARTIFACTS_DIR"

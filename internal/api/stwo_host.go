@@ -10,6 +10,8 @@ import (
 
 // VerifyStwoHost verifies a named Stwo/M31 proof (FOLD or SSLE) in-process.
 // Dummy DSTW is rejected. No CosmWasm contract is required.
+// libwasmvm routes this through Path A AnyVerifyingKey.Verify (same as
+// env.proof_instance_verify). Guest contracts must not grow a second Stwo import.
 func VerifyStwoHost(proof, instances []byte) error {
 	p := makeView(proof)
 	defer runtime.KeepAlive(proof)
