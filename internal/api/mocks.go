@@ -196,6 +196,11 @@ type ErrorGasOverflow struct {
 	Descriptor string
 }
 
+// ErrorNegativeGasConsumed matches cosmos-sdk store/types; recoverPanic maps it to OutOfGas.
+type ErrorNegativeGasConsumed struct {
+	Descriptor string
+}
+
 type MockGasMeter interface {
 	types.GasMeter
 	ConsumeGas(amount types.Gas, descriptor string)
