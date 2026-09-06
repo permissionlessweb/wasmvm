@@ -3,25 +3,21 @@
 //!
 //! **Singular verify API:** contracts use `env.proof_instance_verify` (Path A),
 //! which loads a `curve_id=5` VK and calls [`AnyVerifyingKey::verify`]. That
-//! path uses [`STWO_HOST_VERIFY`] when installed. The C ABI below is **only**
-//! for ABCI ProcessProposal (no contract) and **must** go through the same
-//! `AnyVerifyingKey::verify` — not a parallel proof format.
-
-use std::panic::{catch_unwind, AssertUnwindSafe};
+//! path uses [`STWO_HOST_VERIFY`] when installed.
+//!
+//! There is **no** C ABI / cgo `verify_stwo_host_proof`. Native ABCI-without-wasm
+//! was a consensus-research experiment (`feat/stwo-host-cgo-abci`). Release
+//! wasmvm does not export it.
 
 use zk_cosmwasm::{
     AnyInstance, AnyVerifyingKey, Proof, StwoInstance, StwoVerifyingKey, ZkError, ZkResult,
 };
 
-use crate::error::{handle_c_error_default, Error};
-use crate::handle_vm_panic::handle_vm_panic;
-use crate::memory::{ByteSliceView, UnmanagedVector};
-
 pub fn install() {
     let _ = zk_cosmwasm::STWO_HOST_VERIFY.set(host_verify);
 }
 
-/// In-process S-two verify. Used by the C ABI and by `proof_instance_verify`.
+/// In-process S-two verify used by Path A `proof_instance_verify` via [`STWO_HOST_VERIFY`].
 pub fn host_verify(proof: &[u8], instances: &[u8]) -> ZkResult<()> {
     if proof.windows(4).any(|w| w == b"DSTW") {
         return Err(ZkError::new_err("stwo: Dummy DSTW rejected"));
@@ -86,6 +82,7 @@ fn verify_ssle(proof: &[u8], instances: &[u8]) -> ZkResult<()> {
 
 /// Same Path A dispatch contracts use: footer-only Stwo VK + `AnyVerifyingKey::verify`.
 /// Installs [`STWO_HOST_VERIFY`] so dummy DSTW is rejected on this host.
+/// Not a C ABI.
 pub fn path_a_verify_stwo(proof: &[u8], instances: &[u8]) -> ZkResult<()> {
     install();
     let vk = AnyVerifyingKey::Stwo(StwoVerifyingKey::lean_default());
@@ -93,28 +90,6 @@ pub fn path_a_verify_stwo(proof: &[u8], instances: &[u8]) -> ZkResult<()> {
         bytes: instances.to_vec(),
     });
     vk.verify(&Proof::new(proof.to_vec()), std::slice::from_ref(&i))
-}
-
-/// ProcessProposal waist: verify FOLD/SSLE without a CosmWasm contract.
-/// Wired through Path A `AnyVerifyingKey::verify` (not a second proof format).
-#[unsafe(no_mangle)]
-pub extern "C" fn verify_stwo_host_proof(
-    proof: ByteSliceView,
-    instances: ByteSliceView,
-    error_msg: Option<&mut UnmanagedVector>,
-) {
-    let r = catch_unwind(AssertUnwindSafe(|| {
-        let p = proof
-            .read()
-            .ok_or_else(|| Error::unset_arg("proof"))?;
-        let inst = instances.read().unwrap_or(&[]);
-        path_a_verify_stwo(p, inst).map_err(|e| Error::vm_err(format!("{e:?}")))
-    }))
-    .unwrap_or_else(|err| {
-        handle_vm_panic("verify_stwo_host_proof", err);
-        Err(Error::panic())
-    });
-    handle_c_error_default(r, error_msg);
 }
 
 #[cfg(test)]
