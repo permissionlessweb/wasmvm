@@ -62,6 +62,10 @@ func recoverPanic(ret *C.GoError) {
 		//
 		// We don't want to import Cosmos SDK and also cannot use interfaces to detect these
 		// error types (as they have no methods). So, let's just rely on the descriptive names.
+		if _, ok := rec.(ffiBoundError); ok {
+			*ret = C.GoError_BadArgument
+			return
+		}
 		name := reflect.TypeOf(rec).Name()
 		switch name {
 		// These three types are "thrown" (which is not a thing in Go 🙃) in panics from the gas module
@@ -75,9 +79,9 @@ func recoverPanic(ret *C.GoError) {
 		// - https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/baseapp/recovery.go#L50-L60
 		// This turns the panic into a regular error with a helpful error message.
 		//
-		// The other two gas related panic types indicate programming errors and are handled along
-		// with all other errors in https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/baseapp/recovery.go#L66-L77.
-		case "ErrorOutOfGas":
+		// Overflow / negative consumed are still gas-meter failures at the FFI boundary:
+		// map them to OutOfGas so the VM does not treat them as an untyped Go panic.
+		case "ErrorOutOfGas", "ErrorGasOverflow", "ErrorNegativeGasConsumed":
 			// TODO: figure out how to pass the text in its `Descriptor` field through all the FFI
 			*ret = C.GoError_OutOfGas
 		default:
@@ -85,6 +89,20 @@ func recoverPanic(ret *C.GoError) {
 			debug.PrintStack()
 			*ret = C.GoError_Panic
 		}
+	}
+}
+
+// accountUsedGas writes the gas delta into usedGas. Register this defer *after*
+// recoverPanic so it still runs when the store panics OOG (defers are LIFO).
+func accountUsedGas(gm types.GasMeter, gasBefore uint64, usedGas *cu64) {
+	if usedGas == nil || gm == nil {
+		return
+	}
+	after := uint64(gm.GasConsumed())
+	if after >= gasBefore {
+		*usedGas = cu64(after - gasBefore)
+	} else {
+		*usedGas = 0
 	}
 }
 
@@ -166,10 +184,9 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
 	k := copyU8Slice(key)
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	v := kv.Get(k)
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -193,10 +210,9 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	k := copyU8Slice(key)
 	v := copyU8Slice(val)
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	kv.Set(k, v)
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
@@ -215,10 +231,9 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceV
 	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
 	k := copyU8Slice(key)
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	kv.Delete(k)
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
@@ -242,7 +257,8 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	e := copyU8Slice(end)
 
 	var iter types.Iterator
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	switch order {
 	case 1: // Ascending
 		iter = kv.Iterator(s, e)
@@ -251,8 +267,6 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	default:
 		return C.GoError_BadArgument
 	}
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	iteratorRef, err := buildIterator(state.CallID, iter)
 	if err != nil {
@@ -291,21 +305,27 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_id))
 	if iter == nil {
-		panic("Unable to retrieve iterator.")
+		return C.GoError_BadArgument
 	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoError_None
 	}
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	// call Next at the end, upon creation we have first data loaded
 	k := iter.Key()
 	v := iter.Value()
-	// check iter.Error() ????
+	if err := iter.Error(); err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
 	iter.Next()
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	if err := iter.Error(); err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
 
 	*key = newUnmanagedVector(k)
 	*val = newUnmanagedVector(v)
@@ -343,20 +363,26 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_id))
 	if iter == nil {
-		panic("Unable to retrieve iterator.")
+		return C.GoError_BadArgument
 	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil `output` is considered end
 		return C.GoError_None
 	}
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := uint64(gm.GasConsumed())
+	defer accountUsedGas(gm, gasBefore, usedGas)
 	// call Next at the end, upon creation we have first data loaded
 	out := valFn(iter)
-	// check iter.Error() ????
+	if err := iter.Error(); err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
 	iter.Next()
-	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	if err := iter.Error(); err != nil {
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
 
 	*output = newUnmanagedVector(out)
 	return C.GoError_None
@@ -487,10 +513,9 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 	querier := *(*Querier)(unsafe.Pointer(ptr))
 	req := copyU8Slice(request)
 
-	gasBefore := querier.GasConsumed()
+	gasBefore := uint64(querier.GasConsumed())
+	defer accountUsedGas(querier, gasBefore, usedGas)
 	res := types.RustQuery(querier, req, uint64(gasLimit))
-	gasAfter := querier.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	// serialize the response
 	bz, err := json.Marshal(res)

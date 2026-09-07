@@ -1,0 +1,5 @@
+# Recured 2026-08-14 zk-wasmvm v3.0.7-zk (96eef34 + muslc 1.88)
+# muslc: terpnetwork/zk-alpine-builder:1.88 on groot. glibc .so NOT recured (0103-debian = rustc 1.82).
+62a43e95bbea0083eff0865d98e2adbe9ab474efa9590b9451b7ce14c8c2d4e3  internal/api/libwasmvm.dylib
+7cc14833d1c5e3c5f35c999d322c86590c43ca273ad84b14e74b4d467ea51dbc  internal/api/libwasmvm_muslc.x86_64.a
+a5b5609301169361a8ab75493565ccc0fa145693d3f2cc333e8c3b228e20e33a  internal/api/libwasmvm_muslc.aarch64.a

@@ -204,6 +204,51 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }
 
+func TestCircuitInfoResponseSerialization(t *testing.T) {
+	// 72-byte circuit key, base64 in JSON (std encoding for []byte)
+	key := make([]byte, 72)
+	for i := range key {
+		key[i] = 0x11
+	}
+	myRes := CircuitInfoResponse{
+		ZkID:       uint64(67),
+		Creator:    "jane",
+		CircuitKey: key,
+	}
+	serialized, err := json.Marshal(&myRes)
+	require.NoError(t, err)
+
+	var res CircuitInfoResponse
+	err = json.Unmarshal(serialized, &res)
+	require.NoError(t, err)
+	require.Equal(t, myRes, res)
+	require.Len(t, res.CircuitKey, 72)
+}
+
+// func TestCircuitResponseSerialization(t *testing.T) {
+// 	bytes, err := ForceNewChecksum("f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00").MarshalJSON()
+// 	require.NoError(t, err)
+
+// 	// Deserializaton
+// 	document := []byte(`{"data":67,"creator":"jane","checksum":"f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"}`)
+// 	var res CircuitResponse
+// 	err = json.Unmarshal(document, &res)
+// 	require.NoError(t, err)
+// 	require.Equal(t, CircuitResponse{
+// 		Data: bytes,
+// 	}, res)
+
+// 	// Serialization
+// 	myRes := CircuitInfoResponse{
+// 		ZkID:     uint64(0),
+// 		Creator:  "sam",
+// 		Checksum: ForceNewChecksum("ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"),
+// 	}
+// 	serialized, err := json.Marshal(&myRes)
+// 	require.NoError(t, err)
+// 	require.JSONEq(t, `{"zk_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
+// }
+
 func TestRawRangeQuerySerialization(t *testing.T) {
 	// Serialization
 	query := RawRangeQuery{

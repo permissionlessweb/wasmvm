@@ -57,6 +57,41 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
+func (vm *VM) StoreCircuit(zk CircuitBinary, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCost(zk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	checksum, err := api.StoreCircuit(vm.cache, zk, true)
+	return checksum, gasCost, err
+}
+
+// StoreCodeWithCircuit compiles Wasm (same static checks as StoreCode) and stores
+// the circuit blob (check_circuit). Returns [wasmChecksum 32, circuitKey 72].
+//
+// Live wasmd create_with_circuit does not call this: it uses StoreCode then
+// StoreCircuit, each already checked. This combined API is for tests / tooling
+// and must not skip check_wasm. The only wasm skip is StoreCodeUnchecked
+// (state-sync of previously validated code).
+func (vm *VM) StoreCodeWithCircuit(wasm WasmCode, vk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
+	gasCost := compileCost(wasm) + compileCost(vk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	// persist=true, unchecked=false → Rust checked=!unchecked → check_wasm + check_circuit
+	combined, err := api.StoreCodeWithCircuit(vm.cache, wasm, vk, true, false)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	code, circuit, err := types.SplitCombinedStoreIDs(combined)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	return []Checksum{code, Checksum(circuit)}, gasCost, nil
+}
+
 // StoreCode will compile the Wasm code, and store the resulting compiled module
 // as well as the original code. Both can be referenced later via Checksum.
 // This must be done one time for given code, after which it can be
@@ -66,7 +101,7 @@ func (vm *VM) Cleanup() {
 // This function stores the code for that contract only once, but it can
 // be instantiated with custom inputs in the future.
 //
-// Returns both the checksum, as well as the gas cost of compilation (in CosmWasm Gas) or an error.
+// Returns both the checksum and gas cost of compilation (in CosmWasm Gas) or an error.
 func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {
@@ -75,6 +110,44 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 
 	checksum, err := api.StoreCode(vm.cache, code, true)
 	return checksum, gasCost, err
+}
+
+// SimulateStoreCode is the same as StoreCode but does not actually store the code.
+// This is useful for simulating all the validations happening in StoreCode without actually
+// writing anything to disk.
+func (vm *VM) SimulateStoreCodeWithCircuit(code WasmCode, zk CircuitBinary, gasLimit uint64) ([]Checksum, uint64, error) {
+	gasCost := compileCost(code) + compileCost(zk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	// persist=false, unchecked=false — validate wasm+circuit, no disk
+	combined, err := api.StoreCodeWithCircuit(vm.cache, code, zk, false, false)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	codeID, circuit, err := types.SplitCombinedStoreIDs(combined)
+	if err != nil {
+		return nil, gasCost, err
+	}
+	return []Checksum{codeID, Checksum(circuit)}, gasCost, nil
+}
+
+// SimulateStoreCode is the same as StoreCode but does not actually store the code.
+// This is useful for simulating all the validations happening in StoreCode without actually
+// writing anything to disk.
+func (vm *VM) SimulateStoreCircuit(zk CircuitBinary, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCost(zk)
+	if gasLimit < gasCost {
+		return nil, gasCost, types.OutOfGasError{}
+	}
+
+	checksum, err := api.StoreCircuit(vm.cache, zk, false)
+	if err != nil {
+		return nil, gasCost, err
+	}
+
+	return checksum, gasCost, nil
 }
 
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
@@ -96,8 +169,25 @@ func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return api.StoreCodeUnchecked(vm.cache, code)
 }
 
+// StoreCodeUnchecked is the same as StoreCode but skips static validation checks and charges no gas.
+// Use this for adding code that was checked before, particularly in the case of state sync.
+func (vm *VM) StoreCircuitUnchecked(code CircuitBinary) (Checksum, error) {
+	return api.StoreCircuitUnchecked(vm.cache, code)
+}
+
+// StoreParam stores raw halo2 commitment parameters independently, without a
+// full circuit. The params are written to `zk_param/{param_key}.bin` and cached
+// in pinned memory. Returns the 36-byte param_key.
+func (vm *VM) StoreParam(param CircuitBinary) ([]byte, error) {
+	return api.StoreParam(vm.cache, param)
+}
+
 func (vm *VM) RemoveCode(checksum Checksum) error {
 	return api.RemoveCode(vm.cache, checksum)
+}
+
+func (vm *VM) RemoveCircuit(checksum Checksum) error {
+	return api.RemoveCircuit(vm.cache, checksum)
 }
 
 // GetCode will load the original Wasm code for the given checksum.
@@ -111,11 +201,23 @@ func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
 	return api.GetCode(vm.cache, checksum)
 }
 
+// GetCircuit
+func (vm *VM) GetCircuit(checksum Checksum) (CircuitBinary, error) {
+	return api.GetCircuit(vm.cache, checksum)
+}
+
 // Pin pins a code to an in-memory cache, such that is
 // always loaded quickly when executed.
 // Pin is idempotent.
 func (vm *VM) Pin(checksum Checksum) error {
 	return api.Pin(vm.cache, checksum)
+}
+
+// Pin pins a code to an in-memory cache, such that is
+// always loaded quickly when executed.
+// Pin is idempotent.
+func (vm *VM) PinCircuit(checksum Checksum) error {
+	return api.PinCircuit(vm.cache, checksum)
 }
 
 // Unpin removes the guarantee of a contract to be pinned (see Pin).
@@ -126,7 +228,33 @@ func (vm *VM) Unpin(checksum Checksum) error {
 	return api.Unpin(vm.cache, checksum)
 }
 
-// Returns a report of static analysis of the wasm contract (uncompiled).
+// UnpinCircuit removes the guarantee of a circuit to be pinned (see PinCircuit).
+// UnpinCircuit is idempotent.
+func (vm *VM) UnpinCircuit(checksum Checksum) error {
+	return api.UnpinCircuit(vm.cache, checksum)
+}
+
+// SyncPinnedCodes ensures the given codes are pinned (upstream CosmWasm v3.0.x).
+func (vm *VM) SyncPinnedCodes(checksums []Checksum) error {
+	buffer := make([]byte, 0)
+	for _, checksum := range checksums {
+		buffer = append(buffer, checksum...)
+	}
+	return api.SyncPinnedCodes(vm.cache, buffer)
+}
+
+// SyncPinnedCircuits ensures the given circuit keys (72-byte) match the pinned set.
+// Circuit analogue of SyncPinnedCodes for wasmd bulk pin / node restart.
+func (vm *VM) SyncPinnedCircuits(circuitKeys []Checksum) error {
+	// Circuit keys may be stored as Checksum-like []byte of length 72 in wasmd.
+	buffer := make([]byte, 0)
+	for _, key := range circuitKeys {
+		buffer = append(buffer, key...)
+	}
+	return api.SyncPinnedCircuits(vm.cache, buffer)
+}
+
+// AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
 func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
@@ -296,7 +424,7 @@ func (vm *VM) Migrate(
 //
 // MigrateMsg has some data on how to perform the migration.
 //
-// MigrateWithInfo takes one more argument - `migrateInfo`. It consist of an additional data
+// MigrateWithInfo takes one more argument - `migrateInfo`. It consists of an additional data
 // related to the on-chain current contract's state version.
 func (vm *VM) MigrateWithInfo(
 	checksum Checksum,
@@ -404,7 +532,7 @@ func (vm *VM) Reply(
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake phase
 func (vm *VM) IBCChannelOpen(
 	checksum Checksum,
 	env types.Env,
@@ -438,7 +566,7 @@ func (vm *VM) IBCChannelOpen(
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake phase
 func (vm *VM) IBCChannelConnect(
 	checksum Checksum,
 	env types.Env,
@@ -539,7 +667,7 @@ func (vm *VM) IBCPacketReceive(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBCPacketAck is available on IBC-enabled contracts and is called when an
+// IBCPacketAck is available on IBC-enabled contracts and is called when
 // the response for an outgoing packet (previously sent by this contract)
 // is received
 func (vm *VM) IBCPacketAck(
@@ -813,7 +941,7 @@ func (vm *VM) IBC2PacketSend(
 	return &result, gasReport.UsedInternally, nil
 }
 
-func compileCost(code WasmCode) uint64 {
+func compileCost(code []byte) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
 	// https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803

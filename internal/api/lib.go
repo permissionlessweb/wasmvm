@@ -86,6 +86,20 @@ func ReleaseCache(cache Cache) {
 	cache.lockfile.Close() // Also releases the file lock
 }
 
+func StoreCodeWithCircuit(cache Cache, wasm, vk []byte, persist, unchecked bool) ([]byte, error) {
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
+	v := makeView(vk)
+	defer runtime.KeepAlive(vk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_code_with_circuit(cache.ptr, w, v, cbool(persist), cbool(unchecked), &errmsg)
+	fmt.Printf("StoreCodeWithCircuit - checksum: %v\n", checksum)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
@@ -95,6 +109,39 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
+func StoreCircuit(cache Cache, vk []byte, persist bool) ([]byte, error) {
+	w := makeView(vk)
+	defer runtime.KeepAlive(vk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_circuit(cache.ptr, w, cbool(persist), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
+func StoreCircuitUnchecked(cache Cache, zk []byte) ([]byte, error) {
+	z := makeView(zk)
+	defer runtime.KeepAlive(zk)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_circuit(cache.ptr, z, cbool(true), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
+func StoreParam(cache Cache, param []byte) ([]byte, error) {
+	p := makeView(param)
+	defer runtime.KeepAlive(param)
+	errmsg := uninitializedUnmanagedVector()
+	paramKey, err := C.store_param(cache.ptr, p, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(paramKey), nil
 }
 
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
@@ -119,11 +166,33 @@ func RemoveCode(cache Cache, checksum []byte) error {
 	return nil
 }
 
+func RemoveCircuit(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.remove_circuit(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
 	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(wasm), nil
+}
+
+func GetCircuit(cache Cache, checksum []byte) ([]byte, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	wasm, err := C.load_circuit(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -141,11 +210,56 @@ func Pin(cache Cache, checksum []byte) error {
 	return nil
 }
 
+func PinCircuit(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.pin_circuit(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func Unpin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
 	_, err := C.unpin(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func UnpinCircuit(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.unpin_circuit(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func SyncPinnedCodes(cache Cache, checksums []byte) error {
+	cs := makeView(checksums)
+	defer runtime.KeepAlive(checksums)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.sync_pinned_codes(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+// SyncPinnedCircuits bulk-syncs pinned circuits (concatenated 72-byte circuit keys).
+func SyncPinnedCircuits(cache Cache, circuitKeys []byte) error {
+	cs := makeView(circuitKeys)
+	defer runtime.KeepAlive(circuitKeys)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.sync_pinned_circuits(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}

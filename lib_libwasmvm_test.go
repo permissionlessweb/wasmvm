@@ -24,11 +24,12 @@ const (
 	testingCacheSize   = 100                     // MiB
 )
 
-var testingCapabilities = []string{"staking", "stargate", "iterator"}
+var testingCapabilities = []string{"staking", "stargate", "iterator", "bulk_memory"}
 
 const (
 	cyberpunkTestContract = "./testdata/cyberpunk.wasm"
 	hackatomTestContract  = "./testdata/hackatom.wasm"
+	noRickTestCircuitVK   = "./testdata/norick_vk.bin"
 )
 
 func withVM(t *testing.T) *VM {
@@ -50,6 +51,53 @@ func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	checksum, _, err := vm.StoreCode(wasm, testingGasLimit)
 	require.NoError(t, err)
 	return checksum
+}
+
+func TestStoreCodeAndVk(t *testing.T) {
+	vm := withVM(t)
+
+	// Valid hackatom contract & no_rick vk
+	{
+		wasm, err := os.ReadFile(hackatomTestContract)
+		require.NoError(t, err)
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		ids, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+		require.NoError(t, err)
+		require.Len(t, ids, 2)
+		require.Len(t, ids[0], types.ChecksumLen)
+		require.Len(t, ids[1], types.CircuitKeyLen)
+	}
+
+	// Valid cyberpunk contract
+	{
+		wasm, err := os.ReadFile(cyberpunkTestContract)
+		require.NoError(t, err)
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+		require.NoError(t, err)
+	}
+	// // Valid Wasm with no exports
+	{
+		// echo '(module)' | wat2wasm - -o empty.wasm
+		// hexdump -C < empty.wasm
+
+		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+		// vk, err := os.ReadFile(noRickTestCircuitVK)
+		// require.NoError(t, err)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
+		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
+	}
+	// Garbage wasm is rejected by check_wasm (same as StoreCode)
+	{
+		wasm := []byte("tete")
+		vk, err := os.ReadFile(noRickTestCircuitVK)
+		require.NoError(t, err)
+		_, _, err = vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+	}
+
 }
 
 func TestStoreCode(t *testing.T) {
@@ -103,6 +151,58 @@ func TestStoreCode(t *testing.T) {
 	}
 }
 
+func TestSimulateStoreCodeWithCircuit(t *testing.T) {
+	vm := withVM(t)
+
+	hackatom, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	noRickVk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	specs := map[string]struct {
+		wasm []byte
+		vk   []byte
+		err  string
+	}{
+		"valid hackatom contract": {
+			wasm: hackatom,
+			vk:   noRickVk,
+		},
+		"no wasm": {
+			wasm: []byte("foobar"),
+			vk:   noRickVk,
+			err:  "Error calling the VM",
+		},
+		"no vk": {
+			wasm: hackatom,
+			vk:   []byte(""),
+			err:  "Error calling the VM",
+		},
+	}
+
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			checksums, _, err := vm.SimulateStoreCodeWithCircuit(spec.wasm, spec.vk, testingGasLimit)
+
+			if spec.err != "" {
+				assert.ErrorContains(t, err, spec.err)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, checksums, 2)
+				require.Len(t, checksums[0], types.ChecksumLen)
+				require.Len(t, checksums[1], types.CircuitKeyLen)
+				res, err := vm.GetCode(checksums[0])
+				fmt.Printf("res: %v\n", res)
+				fmt.Printf("err: %v\n", err)
+				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+				// persist=false still warms the in-memory circuit LRU (H-03).
+				res2, err := vm.GetCircuit(checksums[1])
+				require.NoError(t, err)
+				require.NotEmpty(t, res2)
+			}
+		})
+	}
+}
 func TestSimulateStoreCode(t *testing.T) {
 	vm := withVM(t)
 
@@ -151,6 +251,27 @@ func TestStoreCodeAndGet(t *testing.T) {
 	require.Equal(t, WasmCode(wasm), code)
 }
 
+func TestStoreCodeAndCircuitAndGet(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	vk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	checksum, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+	require.NoError(t, err)
+	require.Len(t, checksum[0], types.ChecksumLen)
+	require.Len(t, checksum[1], types.CircuitKeyLen)
+
+	code, err := vm.GetCode(checksum[0])
+	require.NoError(t, err)
+	circuit, err := vm.GetCircuit(checksum[1])
+	require.NoError(t, err)
+	require.Equal(t, WasmCode(wasm), code)
+	require.Equal(t, CircuitBinary(vk), circuit)
+}
+
 func TestRemoveCode(t *testing.T) {
 	vm := withVM(t)
 
@@ -165,6 +286,30 @@ func TestRemoveCode(t *testing.T) {
 
 	err = vm.RemoveCode(checksum)
 	require.ErrorContains(t, err, "Wasm file does not exist")
+}
+
+func TestRemoveCircuit(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := os.ReadFile(hackatomTestContract)
+	require.NoError(t, err)
+	vk, err := os.ReadFile(noRickTestCircuitVK)
+	require.NoError(t, err)
+
+	checksum, _, err := vm.StoreCodeWithCircuit(wasm, vk, testingGasLimit)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum[0])
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum[0])
+	require.ErrorContains(t, err, "Wasm file does not exist")
+
+	err = vm.RemoveCircuit(checksum[1])
+	require.NoError(t, err)
+
+	err = vm.RemoveCircuit(checksum[1])
+	require.ErrorContains(t, err, "Circuit file does not exist")
 }
 
 func TestHappyPath(t *testing.T) {
@@ -254,7 +399,7 @@ func TestEnv(t *testing.T) {
 	expected, _ := json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
 
-	tx_hash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
+	txHash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
 
 	// Execute mirror env with Transaction
 	env = types.Env{
@@ -268,7 +413,7 @@ func TestEnv(t *testing.T) {
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 18,
-			Hash:  tx_hash,
+			Hash:  txHash,
 		},
 	}
 	info = api.MockInfo("creator", nil)

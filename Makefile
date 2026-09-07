@@ -7,6 +7,32 @@ ALPINE_TESTER := cosmwasm/alpine-tester:local
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
+# ---------------------------------------------------------------------------
+# Local path dependencies — auto-detected from libwasmvm/Cargo.toml
+#
+# If Cargo.toml has path deps like ../../cosmwasm/packages/std,
+# the Docker builder must mount that source tree or the build will fail.
+# From inside the container /code = libwasmvm/, so the relative path
+# ../../cosmwasm resolves to /cw/zk-cosmwasm.
+#
+# Override the local path:
+#   make release-build-alpine ZK_COSMWASM_DIR=/path/to/zk-cosmwasm
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+_HAS_LOCAL_DEPS := $(shell grep -q 'path = "../../cosmwasm' libwasmvm/Cargo.toml 2>/dev/null && echo yes)
+ZK_COSMWASM_DIR ?= $(shell cd "$$(pwd)/../cosmwasm" 2>/dev/null && pwd)
+ZK_ZCASH_DIR ?= $(shell cd "$$(pwd)/../zcash" 2>/dev/null && pwd)
+
+# Extra docker volume mounts when local path deps are detected.
+_LOCAL_MOUNTS = $(if $(_HAS_LOCAL_DEPS),-v $(ZK_COSMWASM_DIR):/cosmwasm -v $(ZK_ZCASH_DIR):/zcash)
+
+
+# Alpine builder image — use terpnetwork/zk-alpine-builder:1.88 (Rust 1.88)
+# when local deps are detected, since transitive deps may require edition2024
+# which the upstream Cargo 1.86 builder cannot handle.
+ZK_ALPINE_BUILDER ?= cosmwasm/libwasmvm-builder:0103-alpine
+_ALPINE_BUILDER = $(if $(_HAS_LOCAL_DEPS),$(ZK_ALPINE_BUILDER),$(BUILDERS_PREFIX)-alpine)
+
 SHARED_LIB_SRC = "" # File name of the shared library as created by the Rust build system
 SHARED_LIB_DST = "" # File name of the shared library that we store
 ifeq ($(OS),Windows_NT)
@@ -75,37 +101,65 @@ bench:
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
-	# build the muslc *.a file
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
+ifdef _HAS_LOCAL_DEPS
+	@echo "==> Detected local path deps — mounting $(ZK_COSMWASM_DIR) at /cw/zk-cosmwasm"
+	@echo "==> Using builder: $(_ALPINE_BUILDER)"
+endif
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(_ALPINE_BUILDER)
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_x86_64.sh
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-debian build_gnu_x86_64.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos.sh
 	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the static library for macOS (.a)
+# UNIVERSAL=1 (docker only) also builds x86_64 and lipo. Default is aarch64-only.
 release-build-macos-static:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos_static.sh
+	docker run --rm -e UNIVERSAL=$(UNIVERSAL) -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
+# Native Darwin arm64 static archive (no Docker). Use this on a Mac to curate
+# libwasmvmstatic_darwin.a for `go build -tags static_wasm`.
+.PHONY: release-build-macos-static-arm64
+release-build-macos-static-arm64:
+	@bash builders/host/build_macos_static_arm64.sh
+
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_windows.sh
 	cp libwasmvm/artifacts/wasmvm.dll internal/api
 	make update-bindings
+	
+# Custom builder image override (for terp-network builds)
+BUILDER_IMAGE ?= terpnetwork/zk-alpine-builder:1.88
+
+# Same as release-build-alpine but uses a configurable builder image
+release-build-alpine-custom:
+ifdef _HAS_LOCAL_DEPS
+	@echo "==> Detected local path deps — mounting $(ZK_COSMWASM_DIR) at /cw/zk-cosmwasm"
+endif
+	@echo "==> Using builder: $(BUILDER_IMAGE)"
+	docker run --rm \
+		-v $(shell pwd)/libwasmvm:/code \
+		$(_LOCAL_MOUNTS) \
+		$(BUILDER_IMAGE)
+	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
+	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
+	make update-bindings
+
 
 update-bindings:
 # After we build libwasmvm, we have to copy the generated bindings for Go code to use.
@@ -117,7 +171,7 @@ release-build:
 	make release-build-alpine
 	make release-build-linux
 	make release-build-macos
-	make release-build-windows
+# 	make release-build-windows
 
 .PHONY: create-tester-image
 create-tester-image:

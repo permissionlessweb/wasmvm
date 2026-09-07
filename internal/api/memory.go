@@ -5,7 +5,15 @@ package api
 */
 import "C"
 
-import "unsafe"
+import (
+	"math"
+	"unsafe"
+)
+
+// ffiBoundError is a panic value for untrusted FFI length/cap. recoverPanic maps it to GoError_BadArgument.
+type ffiBoundError string
+
+func (e ffiBoundError) Error() string { return string(e) }
 
 // makeView creates a view into the given byte slice what allows Rust code to read it.
 // The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
@@ -66,8 +74,20 @@ func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 		out = nil
 	} else if v.cap == cusize(0) {
 		// There is no allocation we can copy
+		if v.len != 0 {
+			panic(ffiBoundError("unmanaged vector len > 0 with cap 0"))
+		}
 		out = []byte{}
 	} else {
+		if v.ptr == cu8_ptr(nil) && v.len != 0 {
+			panic(ffiBoundError("unmanaged vector nil ptr with nonzero len"))
+		}
+		if uint64(v.len) > uint64(v.cap) {
+			panic(ffiBoundError("unmanaged vector len > cap"))
+		}
+		if uint64(v.len) > uint64(math.MaxInt32) {
+			panic(ffiBoundError("unmanaged vector len exceeds MaxInt32"))
+		}
 		// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 		out = C.GoBytes(unsafe.Pointer(v.ptr), cint(v.len))
 	}
@@ -91,6 +111,12 @@ func copyU8Slice(view C.U8SliceView) []byte {
 	if view.len == 0 {
 		// In this case, we don't want to look into the ptr
 		return []byte{}
+	}
+	if view.ptr == cu8_ptr(nil) {
+		panic(ffiBoundError("U8SliceView nil ptr with nonzero len"))
+	}
+	if uint64(view.len) > uint64(math.MaxInt32) {
+		panic(ffiBoundError("U8SliceView len exceeds MaxInt32"))
 	}
 	// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 	res := C.GoBytes(unsafe.Pointer(view.ptr), cint(view.len))

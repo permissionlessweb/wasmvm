@@ -1,7 +1,7 @@
 # Use a debian version that is old enough to lead to a low
 # glibc requirement of builds.
-# Debian 11 "Bullseye" has long-term support until August 31st, 2026
-FROM --platform=linux/amd64 debian:11-slim
+# Debian 12 "Bullseye" has long-term support until August 31st, 2026
+FROM --platform=linux/amd64 debian:13-slim
 
 RUN apt update -y \
   && apt install -y gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget clang
@@ -13,7 +13,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 
 RUN wget --no-verbose "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" \
   && chmod +x rustup-init \
-  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.82.0 \
+  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.86.0 \
   && rm rustup-init \
   && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
   && rustup --version \

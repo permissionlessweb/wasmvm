@@ -78,6 +78,21 @@ func (e NoSuchCode) Error() string {
 	return fmt.Sprintf("no such code: %d", e.CodeID)
 }
 
+type NoSuchCircuit struct {
+	ZkID uint64 `json:"zk_id,omitempty"`
+}
+
+func (e NoSuchCircuit) Error() string {
+	return fmt.Sprintf("no such circuit: %d", e.ZkID)
+}
+
+type NoVkorWasm struct {
+}
+
+func (e NoVkorWasm) Error() string {
+	return "must provide either wasm or vk bytes"
+}
+
 type Unknown struct{}
 
 func (e Unknown) Error() string {

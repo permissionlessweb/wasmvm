@@ -365,6 +365,8 @@ type WasmQuery struct {
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
 	RawRange     *RawRangeQuery     `json:"raw_range,omitempty"`
+	Circuit      *CircuitQuery      `json:"circuit,omitempty"`
+	CircuitInfo  *CircuitInfoQuery  `json:"circuit_info,omitempty"`
 }
 
 // SmartQuery response is raw bytes ([]byte)
@@ -456,4 +458,28 @@ type CodeInfoResponse struct {
 	// Checksum is the hash of the Wasm blob. This field must always be set to a 32 byte value.
 	// Everything else is considered a bug.
 	Checksum Checksum `json:"checksum"`
+}
+
+// CircuitQuery fetches circuit data (VK bytes) by zkID
+type CircuitQuery struct {
+	ZkID uint64 `json:"zk_id"`
+}
+
+// CircuitResponse contains the raw circuit data (VK bytes)
+type CircuitResponse struct {
+	Data []byte `json:"data"`
+}
+
+// CircuitInfoQuery fetches circuit metadata by zkID
+type CircuitInfoQuery struct {
+	ZkID uint64 `json:"zk_id"`
+}
+
+// CircuitInfoResponse contains circuit metadata.
+// CircuitKey is the wasmvm cache key (typically 72 bytes: param_key||vk_key),
+// not a 32-byte Wasm checksum.
+type CircuitInfoResponse struct {
+	ZkID       uint64 `json:"zk_id"`
+	Creator    string `json:"creator"`
+	CircuitKey []byte `json:"circuit_key"`
 }
