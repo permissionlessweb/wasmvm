@@ -6,6 +6,12 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 (empty)
 
+## [4.0.0-zk] - 2026-09-20
+
+### Changed
+
+- **Breaking:** libwasmvm **4.0.0-zk** tracks CosmWasm **4.0.0-zk**. Path A hosts install via `zk_cosmwasm_hosts::install()` (not in-crate Stwo/Flock modules). Halo2 IPA is zakura-halo2-proofs (`5364d3d`). Dummy Flock/DSTW rejected. `hash-poseidon` default.
+
 ## [3.1.0-zk] - 2026-09-20
 
 ### Added
@@ -1764,7 +1770,8 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.1.0-zk...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v4.0.0-zk...HEAD
+[4.0.0-zk]: https://github.com/permissionlessweb/wasmvm/compare/v3.1.0-zk...v4.0.0-zk
 [3.1.0-zk]: https://github.com/permissionlessweb/wasmvm/compare/v3.0.7...v3.1.0-zk
 [3.0.7]: https://github.com/CosmWasm/wasmvm/compare/v3.0.6...v3.0.7
 [3.0.6]: https://github.com/CosmWasm/wasmvm/compare/v3.0.5...v3.0.6
