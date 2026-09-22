@@ -14,8 +14,10 @@ against a leftover 3.0.7 `.so`.
 | `terpnetwork/zk-debian-builder:4.0.0-zk` | `builders/Dockerfile.debian-nightly` | `libwasmvm.{x86_64,aarch64}.so` |
 | `terpnetwork/zk-cross-builder:4.0.0-zk` | `builders/Dockerfile.cross-nightly` | osxcross dylib (optional) |
 
-Registry: `ghcr.io/terpnetwork/zk-{alpine,debian,cross}-builder:4.0.0-zk`.
-Local tags omit the `ghcr.io/` prefix (`terpnetwork/zk-*-builder:4.0.0-zk`).
+Local tags only: `terpnetwork/zk-*-builder:4.0.0-zk`. Do **not** push these
+images (2–8GB toolchains). Operator registry is
+`registry.terp.network/terp-core:<tag>` for compiled `terpd`, and S3
+`releases/zk-wasmvm/v4.0.0-zk/` for muslc. Not GHCR.
 
 ## Build the images (once)
 
@@ -23,7 +25,7 @@ Local tags omit the `ghcr.io/` prefix (`terpnetwork/zk-*-builder:4.0.0-zk`).
 cd crates/zk-wasmvm/builders
 make docker-images-4.0.0-zk
 # make docker-images           # ERROR: refuses CosmWasm 0103
-# make docker-publish-4.0.0-zk # push to GHCR after login
+# make docker-publish-4.0.0-zk # ERROR: builders are not published
 ```
 
 `make docker-images` is fail-closed. Upstream 0103 Dockerfiles remain as

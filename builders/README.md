@@ -24,7 +24,8 @@ archives for this fork are built with:
 | `terpnetwork/zk-debian-builder:4.0.0-zk` | glibc `.so` |
 | `terpnetwork/zk-cross-builder:4.0.0-zk` | osxcross (optional) |
 
-Published as `ghcr.io/terpnetwork/zk-*-builder:4.0.0-zk`. Canonical write-up:
+Local tags only (`terpnetwork/zk-*-builder:4.0.0-zk`). Do not push to GHCR
+or `registry.terp.network`. Canonical write-up:
 [`docs/BUILDERS.md`](../docs/BUILDERS.md).
 
 ```sh

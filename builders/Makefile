@@ -2,7 +2,6 @@
 # Do not pull or push cosmwasm/libwasmvm-builder:0103-* (rustc 1.86, no Path A).
 # See docs/BUILDERS.md and builders/README.md.
 ZK_TAG := 4.0.0-zk
-GHCR_PREFIX := ghcr.io/terpnetwork
 
 .PHONY: docker-image-alpine-nightly
 docker-image-alpine-nightly:
@@ -19,21 +18,23 @@ docker-image-cross-nightly:
 .PHONY: docker-images-4.0.0-zk
 docker-images-4.0.0-zk: docker-image-alpine-nightly docker-image-debian-nightly docker-image-cross-nightly
 
+# Builders are local compile images (2–8GB). Do not push them to
+# registry.terp.network (413 on 5GB layers) or GHCR. Release artifacts are
+# linux terpd + muslc on S3; runtime image is registry.terp.network/terp-core:<tag>.
 .PHONY: docker-publish-4.0.0-zk
 docker-publish-4.0.0-zk:
-	docker tag terpnetwork/zk-alpine-builder:$(ZK_TAG) $(GHCR_PREFIX)/zk-alpine-builder:$(ZK_TAG)
-	docker tag terpnetwork/zk-debian-builder:$(ZK_TAG) $(GHCR_PREFIX)/zk-debian-builder:$(ZK_TAG)
-	docker tag terpnetwork/zk-cross-builder:$(ZK_TAG) $(GHCR_PREFIX)/zk-cross-builder:$(ZK_TAG)
-	docker push $(GHCR_PREFIX)/zk-alpine-builder:$(ZK_TAG)
-	docker push $(GHCR_PREFIX)/zk-debian-builder:$(ZK_TAG)
-	docker push $(GHCR_PREFIX)/zk-cross-builder:$(ZK_TAG)
+	@echo "ERROR: do not push zk-*-builder images." >&2
+	@echo "Builders stay local: terpnetwork/zk-*-builder:$(ZK_TAG)" >&2
+	@echo "Compiled release: S3 releases/zk-wasmvm/v4.0.0-zk/ and registry.terp.network/terp-core:<tag>" >&2
+	@echo "See networks/upgrades/v6.3/REGISTRY-HANDOFF.md" >&2
+	@exit 1
 
 # Default `docker-images` used to build CosmWasm 0103. That is the mixed-generation trip.
 .PHONY: docker-images
 docker-images:
 	@echo "ERROR: 4.0.0-zk does not use cosmwasm/libwasmvm-builder:0103-*." >&2
 	@echo "Build ours:  make docker-images-4.0.0-zk" >&2
-	@echo "Push ours:   make docker-publish-4.0.0-zk  (ghcr.io/terpnetwork/zk-*-builder:4.0.0-zk)" >&2
+	@echo "Builders stay local (do not push). Release image: registry.terp.network/terp-core:<tag>" >&2
 	@echo "Upstream 0103 (do not use for Path A): make docker-images-upstream-0103" >&2
 	@exit 1
 
