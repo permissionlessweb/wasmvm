@@ -245,8 +245,7 @@ pub extern "C" fn init_cache(
 }
 
 fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    crate::stwo_host::install();
-    crate::flock_host::install();
+    zk_cosmwasm_hosts::install();
     let config =
         serde_json::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
     // parse the supported capabilities

@@ -44,8 +44,12 @@ ensure we can switch between compiler versions in some range.
 
 ## Production Rust compiler
 
-This is the version set in the builders: `builders/Dockerfile.alpine`,
-`builders/Dockerfile.debian` and `Dockerfile.cross`.
+**4.0.0-zk:** rustc **nightly** in `builders/Dockerfile.{alpine,debian,cross}-nightly`
+(`terpnetwork/zk-*-builder:4.0.0-zk`). Path A Stwo hosts need `portable_simd`.
+Do not use `builders/Dockerfile.{alpine,debian,cross}` (CosmWasm 0103 / rustc
+1.86) for this tag.
+
+Upstream CosmWasm 0103 still pins 1.86 in the non-nightly Dockerfiles.
 
 ## Min Rust compiler
 
@@ -61,8 +65,9 @@ modern to install and execute tools like `cargo-audit`.
 
 We currently use the following version:
 
-| Type                     | Rust version | Note                              |
-| ------------------------ | ------------ | --------------------------------- |
-| Production Rust compiler | 1.86.0       | Builders version 0103             |
-| Min Rust compiler        | 1.86.0       | Supports builder versions >= 0103 |
-| Tooling Rust compiler    | 1.86.0       |                                   |
+| Type                     | Rust version | Note |
+| ------------------------ | ------------ | ---- |
+| Production (4.0.0-zk)    | nightly      | `terpnetwork/zk-*-builder:4.0.0-zk` (alpine/debian/cross-nightly) |
+| Upstream CosmWasm 0103   | 1.86.0       | Do **not** use for Path A / this tag |
+| Min Rust compiler        | 1.86.0       | Host tooling / non-Path-A crates |
+| Tooling Rust compiler    | 1.86.0       |                                    |

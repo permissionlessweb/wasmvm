@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: 1.86.0
+          toolchain: nightly
           components: rustfmt
 
       - name: Cargo cache
@@ -31,9 +31,9 @@ jobs:
             libwasmvm/target/release/.fingerprint
             libwasmvm/target/release/build
             libwasmvm/target/release/deps
-          key: cargocache-v3-libwasmvm_sanity-rust-1.86.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          key: cargocache-v4-libwasmvm_sanity-rust-nightly-${{ hashFiles('libwasmvm/Cargo.lock') }}
           restore-keys: |
-            cargocache-v3-libwasmvm_sanity-rust-1.86.0-
+            cargocache-v4-libwasmvm_sanity-rust-nightly-
 
       - name: Ensure libwasmvm/bindings.h is up-to-date
         working-directory: libwasmvm
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust-version: ["1.86.0", "1.87.0"]
+        rust-version: ["nightly"]
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable

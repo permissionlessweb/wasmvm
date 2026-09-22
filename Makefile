@@ -1,5 +1,6 @@
-# Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0103
+# Builds the Rust library libwasmvm.
+# 4.0.0-zk: ALWAYS terpnetwork/zk-*-builder (see docs/BUILDERS.md).
+# CosmWasm libwasmvm-builder:0103-* is rustc 1.86 and cannot compile Path A.
 # Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
 # This image is currently not published.
 ALPINE_TESTER := cosmwasm/alpine-tester:local
@@ -22,16 +23,24 @@ USER_GROUP = $(shell id -g)
 _HAS_LOCAL_DEPS := $(shell grep -q 'path = "../../cosmwasm' libwasmvm/Cargo.toml 2>/dev/null && echo yes)
 ZK_COSMWASM_DIR ?= $(shell cd "$$(pwd)/../cosmwasm" 2>/dev/null && pwd)
 ZK_ZCASH_DIR ?= $(shell cd "$$(pwd)/../zcash" 2>/dev/null && pwd)
+ZK_ZAKURA_DIR ?= $(shell cd "$$(pwd)/../zakura-common" 2>/dev/null && pwd)
+ZK_FLOCK_DIR ?= $(shell cd "$$(pwd)/../flock" 2>/dev/null && pwd)
 
 # Extra docker volume mounts when local path deps are detected.
-_LOCAL_MOUNTS = $(if $(_HAS_LOCAL_DEPS),-v $(ZK_COSMWASM_DIR):/cosmwasm -v $(ZK_ZCASH_DIR):/zcash)
+# Container paths must match Cargo.toml: /cosmwasm, /zakura-common, /flock, /zcash.
+_LOCAL_MOUNTS = $(if $(_HAS_LOCAL_DEPS),-v $(ZK_COSMWASM_DIR):/cosmwasm -v $(ZK_ZCASH_DIR):/zcash -v $(ZK_ZAKURA_DIR):/zakura-common -v $(ZK_FLOCK_DIR):/flock)
 
 
-# Alpine builder image — use terpnetwork/zk-alpine-builder:1.88 (Rust 1.88)
-# when local deps are detected, since transitive deps may require edition2024
-# which the upstream Cargo 1.86 builder cannot handle.
-ZK_ALPINE_BUILDER ?= cosmwasm/libwasmvm-builder:0103-alpine
-_ALPINE_BUILDER = $(if $(_HAS_LOCAL_DEPS),$(ZK_ALPINE_BUILDER),$(BUILDERS_PREFIX)-alpine)
+# 4.0.0-zk: ALWAYS our images. Do not pull cosmwasm/libwasmvm-builder:0103-*.
+# Build once: (cd builders && make docker-images-4.0.0-zk)
+DOCKER_PLATFORM ?= linux/amd64
+ZK_ALPINE_BUILDER ?= terpnetwork/zk-alpine-builder:4.0.0-zk
+ZK_DEBIAN_BUILDER ?= terpnetwork/zk-debian-builder:4.0.0-zk
+ZK_CROSS_BUILDER ?= terpnetwork/zk-cross-builder:4.0.0-zk
+_ALPINE_BUILDER = $(ZK_ALPINE_BUILDER)
+_DEBIAN_BUILDER = $(ZK_DEBIAN_BUILDER)
+_CROSS_BUILDER = $(ZK_CROSS_BUILDER)
+_DOCKER_RUN = docker run --rm --platform $(DOCKER_PLATFORM) -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS)
 
 SHARED_LIB_SRC = "" # File name of the shared library as created by the Rust build system
 SHARED_LIB_DST = "" # File name of the shared library that we store
@@ -101,33 +110,39 @@ bench:
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
+	@echo "$(_ALPINE_BUILDER)" | grep -q 'terpnetwork/zk-alpine-builder' \
+		|| { echo "ERROR: alpine builder must be terpnetwork/zk-alpine-builder:4.0.0-zk, not CosmWasm 0103. Got $(_ALPINE_BUILDER)" >&2; exit 1; }
 ifdef _HAS_LOCAL_DEPS
 	@echo "==> Detected local path deps — mounting $(ZK_COSMWASM_DIR) at /cw/zk-cosmwasm"
-	@echo "==> Using builder: $(_ALPINE_BUILDER)"
 endif
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(_ALPINE_BUILDER)
+	@echo "==> Using builder: $(_ALPINE_BUILDER)"
+	$(_DOCKER_RUN) $(_ALPINE_BUILDER)
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
 
-# Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
+# glibc Linux .so — this is what `go test` on Linux links (NOT the muslc .a).
+# Must be OUR debian image. CosmWasm 0103-debian is the mixed-generation trip.
 release-build-linux:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-debian build_gnu_x86_64.sh
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
+	@echo "$(_DEBIAN_BUILDER)" | grep -q 'terpnetwork/zk-debian-builder' \
+		|| { echo "ERROR: debian builder must be terpnetwork/zk-debian-builder:4.0.0-zk, not CosmWasm 0103. Got $(_DEBIAN_BUILDER)" >&2; exit 1; }
+	@echo "==> Using builder: $(_DEBIAN_BUILDER)"
+	$(_DOCKER_RUN) $(_DEBIAN_BUILDER) build_gnu_x86_64.sh
+	$(_DOCKER_RUN) $(_DEBIAN_BUILDER) build_gnu_aarch64.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
 	make update-bindings
 
-# Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
+# macOS .dylib (osxcross). Native Darwin: make build-libwasmvm.
 release-build-macos:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos.sh
+	$(_DOCKER_RUN) $(_CROSS_BUILDER) build_macos.sh
 	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the static library for macOS (.a)
 # UNIVERSAL=1 (docker only) also builds x86_64 and lipo. Default is aarch64-only.
 release-build-macos-static:
-	docker run --rm -e UNIVERSAL=$(UNIVERSAL) -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_macos_static.sh
+	$(_DOCKER_RUN) -e UNIVERSAL=$(UNIVERSAL) $(_CROSS_BUILDER) build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
@@ -139,23 +154,15 @@ release-build-macos-static-arm64:
 
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(_LOCAL_MOUNTS) $(BUILDERS_PREFIX)-cross build_windows.sh
+	$(_DOCKER_RUN) $(_CROSS_BUILDER) build_windows.sh
 	cp libwasmvm/artifacts/wasmvm.dll internal/api
 	make update-bindings
 	
-# Custom builder image override (for terp-network builds)
-BUILDER_IMAGE ?= terpnetwork/zk-alpine-builder:1.88
+BUILDER_IMAGE ?= terpnetwork/zk-alpine-builder:4.0.0-zk
 
-# Same as release-build-alpine but uses a configurable builder image
 release-build-alpine-custom:
-ifdef _HAS_LOCAL_DEPS
-	@echo "==> Detected local path deps — mounting $(ZK_COSMWASM_DIR) at /cw/zk-cosmwasm"
-endif
 	@echo "==> Using builder: $(BUILDER_IMAGE)"
-	docker run --rm \
-		-v $(shell pwd)/libwasmvm:/code \
-		$(_LOCAL_MOUNTS) \
-		$(BUILDER_IMAGE)
+	$(_DOCKER_RUN) $(BUILDER_IMAGE)
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
@@ -166,12 +173,19 @@ update-bindings:
 # We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
 	cp libwasmvm/bindings.h internal/api
 
+# One generation of ALL host libs into internal/api. Do not recut muslc
+# without also recutting glibc .so — Linux go test links the .so.
+.PHONY: release-build
 release-build:
-	# Write like this because those must not run in parallel
-	make release-build-alpine
-	make release-build-linux
-	make release-build-macos
-# 	make release-build-windows
+	$(MAKE) release-build-alpine
+	$(MAKE) release-build-linux
+	$(MAKE) release-build-macos
+	$(MAKE) verify-libwasmvm
+
+.PHONY: verify-libwasmvm
+verify-libwasmvm:
+	@chmod +x builders/host/verify_libwasmvm.sh
+	@bash builders/host/verify_libwasmvm.sh
 
 .PHONY: create-tester-image
 create-tester-image:

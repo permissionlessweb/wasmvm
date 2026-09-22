@@ -4,8 +4,8 @@
 mod api;
 mod args;
 mod cache;
-mod stwo_host;
-mod flock_host;
+mod path_a_hosts;
+
 mod calls;
 mod db;
 mod error;

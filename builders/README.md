@@ -12,9 +12,29 @@ tricky. This folder contains build scripts and a Docker image to create all
 dynamic libraries from one host. In general this is set up for a Linux host, but
 any machine that can run Docker can do the cross-compilation.
 
-## Docker Hub images
+## 4.0.0-zk: our images only
 
-See those DockerHub repos for all available versions of the builder images.
+**Do not pull `cosmwasm/libwasmvm-builder:0103-*`.** Those are rustc 1.86 and
+do not compile Path A. Dynamic libraries (glibc `.so`, Darwin dylib) and muslc
+archives for this fork are built with:
+
+| Image | Output |
+|-------|--------|
+| `terpnetwork/zk-alpine-builder:4.0.0-zk` | muslc `.a` |
+| `terpnetwork/zk-debian-builder:4.0.0-zk` | glibc `.so` |
+| `terpnetwork/zk-cross-builder:4.0.0-zk` | osxcross (optional) |
+
+Published as `ghcr.io/terpnetwork/zk-*-builder:4.0.0-zk`. Canonical write-up:
+[`docs/BUILDERS.md`](../docs/BUILDERS.md).
+
+```sh
+make docker-images-4.0.0-zk
+# make docker-images   # refuses 0103
+```
+
+## Historical CosmWasm Docker Hub images
+
+Upstream CosmWasm (not this fork):
 
 - From version 0100: https://hub.docker.com/r/cosmwasm/libwasmvm-builder/tags
 - Before version 0100: https://hub.docker.com/r/cosmwasm/go-ext-builder/tags
@@ -149,17 +169,45 @@ See those DockerHub repos for all available versions of the builder images.
 
 ## Usage
 
-Create the Docker images, capable of cross-compiling Linux and macOS dynamic
-libs. As the builder images are all x86_64, it can be slow and memory-intensive to
-do this on a different architecture:
+**4.0.0-zk: use our images only.** Do not `docker pull cosmwasm/libwasmvm-builder:0103-*`.
+Those are rustc 1.86 and do not compile Path A. Build ours once:
 
 ```sh
-(cd builders && make docker-images)
+(cd builders && make docker-images-4.0.0-zk)
+# terpnetwork/zk-alpine-builder:4.0.0-zk   muslc .a
+# terpnetwork/zk-debian-builder:4.0.0-zk   glibc .so
+# terpnetwork/zk-cross-builder:4.0.0-zk    osxcross (optional; Darwin native is supported)
 ```
 
-Then in the repo root, `make release-build` will use the above docker image and
-copy the generated `{so,dylib}` files into `internal/api` directory to be
-linked.
+Upstream `make docker-images` (0103) is CosmWasm’s line, not this fork.
+
+Then in the **wasmvm repo root** (`crates/zk-wasmvm`):
+
+```sh
+(cd builders && make docker-images-4.0.0-zk)   # once: nightly alpine+debian+cross
+make release-build                             # muslc .a AND glibc .so AND dylib
+make verify-libwasmvm                          # fail if .so/.a are mixed generations
+```
+
+From **terp-core**:
+
+```sh
+make wasmvm-release-build    # same, via crates/zk-wasmvm
+make wasmvm-verify
+```
+
+Linux `go test` links `internal/api/libwasmvm.$(arch).so`, **not** the muslc `.a`.
+Recutting only alpine is how 4.0.0-zk Go bindings (`store_param`) failed to link
+against a leftover 3.0.7-zk `.so`. `verify-libwasmvm` exists so that cannot
+happen again.
+
+**macOS dylib:** on Darwin, `make build-libwasmvm` (native) is the supported recut.
+`make release-build-macos` uses osxcross and currently fails Path A on
+`x86_64-apple-darwin` (`__rust_probestack`). Do not replace a good native
+`libwasmvm.dylib` with a failed lipo. Native static: `make release-build-macos-static-arm64`.
+
+4.0.0-zk Path A needs rustc nightly. Upstream `0103-*` images are 1.86. Use
+`docker-images-4.0.0-zk` (alpine-nightly / debian-nightly / cross-nightly).
 
 ## Future Work
 
