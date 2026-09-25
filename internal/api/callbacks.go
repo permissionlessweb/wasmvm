@@ -307,26 +307,16 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	if iter == nil {
 		return C.GoError_BadArgument
 	}
-	if !iter.Valid() {
-		// end of iterator, return as no-op, nil key is considered end
-		return C.GoError_None
-	}
-
 	gasBefore := uint64(gm.GasConsumed())
 	defer accountUsedGas(gm, gasBefore, usedGas)
-	// call Next at the end, upon creation we have first data loaded
-	k := iter.Key()
-	v := iter.Value()
-	if err := iter.Error(); err != nil {
+	k, v, ok, err := readIteratorItem(iter)
+	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User
 	}
-	iter.Next()
-	if err := iter.Error(); err != nil {
-		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+	if !ok {
+		return C.GoError_None
 	}
-
 	*key = newUnmanagedVector(k)
 	*val = newUnmanagedVector(v)
 	return C.GoError_None
@@ -365,25 +355,16 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	if iter == nil {
 		return C.GoError_BadArgument
 	}
-	if !iter.Valid() {
-		// end of iterator, return as no-op, nil `output` is considered end
-		return C.GoError_None
-	}
-
 	gasBefore := uint64(gm.GasConsumed())
 	defer accountUsedGas(gm, gasBefore, usedGas)
-	// call Next at the end, upon creation we have first data loaded
-	out := valFn(iter)
-	if err := iter.Error(); err != nil {
+	out, ok, err := readIteratorPart(iter, valFn)
+	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User
 	}
-	iter.Next()
-	if err := iter.Error(); err != nil {
-		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_User
+	if !ok {
+		return C.GoError_None
 	}
-
 	*output = newUnmanagedVector(out)
 	return C.GoError_None
 }
