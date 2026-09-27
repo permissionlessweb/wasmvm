@@ -17,7 +17,7 @@ mod tests {
         zk_cosmwasm_hosts::install();
         let action = [7u8; 128];
         let stub = zk_cosmwasm::prove_flock(&action);
-        assert!(zk_cosmwasm_hosts::flock::host_verify(&stub, &action).is_err());
+        assert!(zk_cosmwasm_hosts::flock::host_verify(&stub, &action, None).is_err());
     }
 
     #[test]
