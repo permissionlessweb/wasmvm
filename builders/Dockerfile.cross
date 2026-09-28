@@ -1,3 +1,7 @@
+# Upstream CosmWasm 0103 cross builder (rustc 1.86).
+# Do NOT use this image for 4.0.0-zk Path A.
+# Use Dockerfile.cross-nightly → terpnetwork/zk-cross-builder:4.0.0-zk.
+# Darwin recut on a Mac: make build-libwasmvm (native).
 FROM --platform=linux/amd64 rust:1.86.0-bookworm
 
 # Install build dependencies

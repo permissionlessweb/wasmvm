@@ -1,3 +1,7 @@
+# Upstream CosmWasm 0103 debian builder (rustc 1.86).
+# Do NOT use this image for 4.0.0-zk Path A.
+# Use Dockerfile.debian-nightly → terpnetwork/zk-debian-builder:4.0.0-zk.
+#
 # Use a debian version that is old enough to lead to a low
 # glibc requirement of builds.
 # Debian 12 "Bullseye" has long-term support until August 31st, 2026

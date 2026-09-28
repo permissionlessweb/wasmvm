@@ -1,3 +1,6 @@
+# Upstream CosmWasm 0103 alpine builder (rustc 1.86).
+# Do NOT use this image for 4.0.0-zk Path A.
+# Use Dockerfile.alpine-nightly → terpnetwork/zk-alpine-builder:4.0.0-zk.
 FROM --platform=linux/amd64 rust:1.86.0-alpine
 
 RUN apk add --no-cache ca-certificates build-base llvm17-dev clang17-static
